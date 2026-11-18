@@ -1,0 +1,3317 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小小廠長大任務 — 3D AIoT 智慧工廠科普探索與實作</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg: #f0f6ff;
+      --surface: #ffffff;
+      --surface-alt: #f8fafc;
+      --navy: #0f172a;
+      --blue: #1d4ed8;
+      --blue-light: #3b82f6;
+      --cyan: #0ea5e9;
+      --cyan-soft: #e0f2fe;
+      --amber: #f59e0b;
+      --amber-soft: #fef3c7;
+      --emerald: #10b981;
+      --emerald-soft: #d1fae5;
+      --red: #ef4444;
+      --red-soft: #fee2e2;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, #e0f2fe 0%, #f0f6ff 35%, #f8fafc 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 14px 20px 36px;
+    }
+
+    /* Header & Top 3-Step Workflow */
+    .top-header {
+      display: grid;
+      grid-template-columns: 1.05fr 2fr;
+      gap: 14px;
+      align-items: stretch;
+      margin-bottom: 14px;
+    }
+
+    .brand-card {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-card::after {
+      content: "";
+      position: absolute;
+      right: -30px;
+      top: -30px;
+      width: 140px;
+      height: 140px;
+      background: radial-gradient(circle, rgba(14,165,233,0.35), transparent 70%);
+      pointer-events: none;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(14, 165, 233, 0.22);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #bae6fd;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      width: fit-content;
+      margin-bottom: 6px;
+    }
+
+    .brand-title { font-size: 26px; font-weight: 900; letter-spacing: 0.5px; line-height: 1.2; }
+    .brand-subtitle { font-size: 13px; color: #cbd5e1; margin-top: 4px; }
+
+    .steps-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .step-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .step-card.active {
+      border-color: var(--cyan);
+      box-shadow: 0 6px 18px rgba(14, 165, 233, 0.16);
+    }
+
+    .step-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--navy);
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .mission-select {
+      width: 100%;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      background: var(--surface-alt);
+      cursor: pointer;
+    }
+
+    .mission-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 8px;
+    }
+
+    .mission-meta strong { color: var(--text); }
+
+    .route-preview {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      min-height: 30px;
+      background: var(--surface-alt);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 5px 8px;
+    }
+
+    .route-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--cyan-soft);
+      color: #0369a1;
+      border: 1px solid #7dd3fc;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .route-chip:hover { background: #bae6fd; }
+    .route-arrow { color: var(--muted); font-size: 11px; font-weight: 900; }
+    .route-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9, #2563eb);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-danger {
+      background: var(--red-soft);
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }
+
+    .btn-danger.active { background: var(--red); color: #fff; }
+
+    .btn-ghost {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover:not(:disabled) { background: #e2e8f0; }
+    .btn-sm { padding: 4px 9px; font-size: 12px; border-radius: 7px; }
+
+    /* Main 3D Factory Stage */
+    .factory-layout {
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .factory-floor-card {
+      background: var(--surface);
+      border: 2px solid #bfdbfe;
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .floor-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .floor-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .camera-controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .status-pill.running .status-dot {
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.65; }
+    }
+
+    /* 3D Canvas Container */
+    .viewport-3d-wrap {
+      position: relative;
+      width: 100%;
+      height: 430px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid #94a3b8;
+      background: linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%);
+      cursor: grab;
+    }
+
+    .viewport-3d-wrap:active { cursor: grabbing; }
+
+    #threeCanvasContainer {
+      width: 100%;
+      height: 100%;
+    }
+
+    .viewport-overlay-hint {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.72);
+      color: #f8fafc;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 8px;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+    }
+
+    .viewport-hover-tag {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(14, 165, 233, 0.92);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 8px;
+      pointer-events: none;
+      display: none;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+    }
+
+    .station-quick-bar {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .station-pill-btn {
+      background: var(--surface-alt);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--navy);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .station-pill-btn:hover {
+      border-color: var(--cyan);
+      background: var(--cyan-soft);
+    }
+
+    .station-pill-btn.selected {
+      border-color: var(--blue);
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .station-pill-btn.active-work {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+    }
+
+    .station-pill-btn.error-work {
+      border-color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .floor-note {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Right Side Panel */
+    .side-panel { display: flex; flex-direction: column; gap: 12px; }
+
+    .panel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .kpi-box {
+      background: var(--surface-alt);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .kpi-label { font-size: 11px; color: var(--muted); font-weight: 700; }
+    .kpi-value { font-size: 18px; font-weight: 900; color: var(--navy); }
+
+    .log-feed {
+      max-height: 215px;
+      overflow-y: auto;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    .log-item {
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: var(--surface-alt);
+      border-left: 3px solid var(--cyan);
+    }
+
+    .log-item.warn { border-left-color: var(--amber); background: #fffbeb; }
+    .log-item.err { border-left-color: var(--red); background: #fef2f2; }
+    .log-item.ok { border-left-color: var(--emerald); background: #ecfdf5; }
+
+    /* AIoT Data Pipeline */
+    .aiot-pipeline {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .pipeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pipeline-title { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+
+    .pipeline-nodes {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .pipe-node {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      padding: 12px;
+      transition: all 0.25s ease;
+    }
+
+    .pipe-node.lit {
+      background: rgba(14, 165, 233, 0.22);
+      border-color: #38bdf8;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.28);
+      transform: translateY(-2px);
+    }
+
+    .pipe-node-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #7dd3fc;
+    }
+
+    .pipe-node-data {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 6px 8px;
+      border-radius: 8px;
+      min-height: 44px;
+    }
+
+    /* Science Highlights Bottom Bar */
+    .science-section-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--navy);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .science-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .science-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    .science-card:hover {
+      border-color: var(--cyan);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .science-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .science-card h4 { font-size: 14px; font-weight: 800; color: var(--navy); margin-bottom: 2px; }
+    .science-card p { font-size: 12px; color: var(--muted); }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 18px;
+      max-width: 560px;
+      width: 100%;
+      padding: 22px;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.3);
+      animation: popIn 0.2s ease;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .modal-title { font-size: 18px; font-weight: 900; color: var(--navy); }
+    .modal-close {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .analysis-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+    .analysis-list li {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      background: var(--surface-alt);
+      border-left: 4px solid var(--blue);
+    }
+    .analysis-list li.good { background: var(--emerald-soft); border-left-color: var(--emerald); }
+    .analysis-list li.bad { background: var(--red-soft); border-left-color: var(--red); }
+
+    .quiz-options { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .quiz-opt {
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .quiz-opt:hover { border-color: var(--cyan); background: var(--cyan-soft); }
+
+    /* Top Mode Tabs */
+    .mode-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      padding: 8px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      width: fit-content;
+    }
+
+    .mode-tab-btn {
+      border: none;
+      background: transparent;
+      padding: 9px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .mode-tab-btn:hover { color: var(--navy); background: var(--surface-alt); }
+
+    .mode-tab-btn.active {
+      background: linear-gradient(135deg, #0f172a, #1d4ed8);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(29, 78, 216, 0.28);
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Employee Mode Controls */
+    .emp-hud-prompt {
+      position: absolute;
+      bottom: 52px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+      cursor: pointer;
+      display: none;
+      z-index: 20;
+      animation: bouncePrompt 1.2s infinite;
+    }
+
+    @keyframes bouncePrompt {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-5px); }
+    }
+
+    .emp-dpad {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 40px);
+      grid-template-rows: repeat(2, 40px);
+      gap: 4px;
+      z-index: 15;
+    }
+
+    .dpad-btn {
+      background: rgba(15, 23, 42, 0.78);
+      color: #fff;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dpad-btn:active { background: var(--cyan); }
+
+    .emp-task-card {
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      border: 2px solid var(--amber);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .emp-task-card.done {
+      background: var(--emerald-soft);
+      border-color: var(--emerald);
+    }
+
+    /* Challenge Mode (10 Levels) */
+    .level-strip {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .level-btn {
+      padding: 8px 4px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.15s ease;
+    }
+
+    .level-btn.current {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+      color: #92400e;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+
+    .level-btn.cleared {
+      border-color: var(--emerald);
+      background: var(--emerald-soft);
+      color: #065f46;
+    }
+
+    .level-btn.locked {
+      opacity: 0.48;
+      cursor: not-allowed;
+      background: #e2e8f0;
+    }
+
+    .countdown-bar-wrap {
+      width: 100%;
+      height: 14px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .countdown-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #10b981, #0ea5e9);
+      transition: width 0.1s linear, background 0.3s;
+    }
+
+    .countdown-bar.warn { background: var(--amber); }
+    .countdown-bar.danger { background: var(--red); }
+
+    .fault-machines-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .fault-machine-card {
+      background: var(--surface);
+      border: 2px solid var(--emerald);
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: default;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .fault-machine-card.broken {
+      border-color: var(--red);
+      background: #fef2f2;
+      cursor: pointer;
+      animation: faultPulse 1.1s infinite;
+    }
+
+    .fault-machine-card.broken.selected {
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.35);
+      transform: translateY(-2px);
+    }
+
+    @keyframes faultPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.25); }
+      50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.12); }
+    }
+
+    .workbench-panel {
+      background: var(--surface);
+      border: 2px solid var(--blue);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .wire-arena {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 6px;
+      min-height: 200px;
+    }
+
+    .wire-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 2;
+    }
+
+    .wire-node {
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 2px solid #cbd5e1;
+      background: #f8fafc;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      min-width: 96px;
+      text-align: center;
+    }
+
+    .wire-node.active { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,23,42,0.2); }
+    .wire-node.connected { opacity: 0.7; cursor: default; }
+
+    .wire-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .switch-board {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 14px 0;
+    }
+
+    .breaker-btn {
+      width: 82px;
+      padding: 10px 6px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: #f1f5f9;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .breaker-btn.on {
+      background: var(--emerald-soft);
+      border-color: var(--emerald);
+      color: #065f46;
+    }
+
+    .screw-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .screw-item {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .screw-bar {
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 6px 0;
+    }
+
+    .screw-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #f59e0b, #10b981);
+      transition: width 0.1s;
+    }
+
+    @media (max-width: 1080px) {
+      .top-header { grid-template-columns: 1fr; }
+      .steps-bar { grid-template-columns: 1fr; }
+      .factory-layout { grid-template-columns: 1fr; }
+      .pipeline-nodes { grid-template-columns: 1fr 1fr; }
+      .science-grid { grid-template-columns: 1fr 1fr; }
+      .station-quick-bar { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 680px) {
+      .pipeline-nodes { grid-template-columns: 1fr; }
+      .science-grid { grid-template-columns: 1fr; }
+      .station-quick-bar { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Mode Switcher Tabs -->
+    <nav class="mode-tabs" aria-label="角色切換分頁">
+      <button class="mode-tab-btn active" data-tab="managerTab">👨‍💼 小小廠長（產線規劃）</button>
+      <button class="mode-tab-btn" data-tab="employeeTab">👷 工廠員工（廠內值班）</button>
+      <button class="mode-tab-btn" data-tab="challengeTab">🔥 限時搶修挑戰（10關）</button>
+    </nav>
+
+    <div id="managerTab" class="tab-pane active">
+    <!-- Top Header & 3-Step Mission Workflow -->
+    <header class="top-header">
+      <div class="brand-card">
+        <div class="brand-badge">🧊 3D AIoT 互動科普實驗室</div>
+        <h1 class="brand-title">小小廠長大任務</h1>
+        <p class="brand-subtitle">3D 智慧工廠科普探索與實作 — 自由旋轉視角、規劃製程、體驗天車搬運與 AI 品檢！</p>
+      </div>
+
+      <div class="steps-bar">
+        <!-- Step 1 -->
+        <div class="step-card active" id="step1Card">
+          <div class="step-head"><span class="step-num">1</span> 接收任務</div>
+          <select id="missionSelect" class="mission-select" aria-label="選擇訂單任務">
+            <option value="standard">訂單 A：標準積木小車（入門）</option>
+            <option value="express">訂單 B：急件客製雙色車（限時）</option>
+            <option value="zeroDefect">訂單 C：高標準零缺陷出貨（挑戰）</option>
+          </select>
+          <div class="mission-meta" id="missionMeta"></div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-card active" id="step2Card">
+          <div class="step-head"><span class="step-num">2</span> 規劃製程</div>
+          <div class="route-preview" id="routePreview"></div>
+          <div class="route-actions">
+            <button class="btn btn-ghost btn-sm" id="btnPresetRecommended">💡 建議路徑</button>
+            <button class="btn btn-ghost btn-sm" id="btnPresetFast">⚡ 精簡 1→3→5→6</button>
+            <button class="btn btn-ghost btn-sm" id="btnClearRoute">🗑️ 清空</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card" id="step3Card">
+          <div class="step-head"><span class="step-num">3</span> 啟動智慧工廠</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btnStartFactory" style="flex:1;">▶ 啟動生產</button>
+            <button class="btn btn-ghost" id="btnResetFactory">↺ 重置</button>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; justify-content:space-between; font-size:12px;">
+            <button class="btn btn-danger btn-sm" id="btnInjectDefect">⚠️ 模擬異常品</button>
+            <label style="display:flex; align-items:center; gap:4px; font-weight:700; color:var(--muted);">
+              速度
+              <select id="speedSelect" style="border-radius:6px; border:1px solid var(--border); padding:2px 4px;">
+                <option value="1">1x</option>
+                <option value="2">2x</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main 3D Factory Stage + Control Panel -->
+    <main class="factory-layout">
+      <section class="factory-floor-card">
+        <div class="floor-topbar">
+          <div class="floor-title">
+            🏭 3D 智慧工廠產線模擬區
+            <div class="status-pill" id="factoryStatusPill">
+              <span class="status-dot"></span>
+              <span id="factoryStatusText">系統就緒・請規劃製程</span>
+            </div>
+          </div>
+          <div class="camera-controls">
+            <button class="btn btn-ghost btn-sm" id="camDefault">🎥 預設視角</button>
+            <button class="btn btn-ghost btn-sm" id="camTop">🦅 俯視總覽</button>
+            <button class="btn btn-ghost btn-sm" id="camAI">🔍 AI品檢特寫</button>
+          </div>
+        </div>
+
+        <!-- Three.js 3D Viewport -->
+        <div class="viewport-3d-wrap" id="viewportWrap">
+          <div id="threeCanvasContainer"></div>
+          <div class="viewport-hover-tag" id="hoverTag"></div>
+          <div class="viewport-overlay-hint">🖱️ 左鍵拖曳旋轉 3D 視角｜滾輪縮放｜點擊 3D 站台加入製程</div>
+        </div>
+
+        <!-- Quick Station Pills -->
+        <div class="station-quick-bar" id="stationQuickBar">
+          <button class="station-pill-btn" data-id="1">① 原料入庫</button>
+          <button class="station-pill-btn" data-id="2">② 分類配料</button>
+          <button class="station-pill-btn" data-id="3">③ 模擬加工</button>
+          <button class="station-pill-btn" data-id="4">④ 組裝作業</button>
+          <button class="station-pill-btn" data-id="5">⑤ AI 視覺品檢</button>
+          <button class="station-pill-btn" data-id="6">⑥ 包裝出貨</button>
+        </div>
+
+        <div class="floor-note">
+          <span>💡 <strong>科普小提示：</strong>可直接點擊 3D 模型或下方按鈕來排列製程順序，體驗天車三軸移動與 AI 視覺品檢！</span>
+          <button class="btn btn-ghost btn-sm" id="btnInspectMode">🔍 查看各站硬體原理</button>
+        </div>
+      </section>
+
+      <!-- Right Side: Factory Control Panel -->
+      <aside class="side-panel">
+        <div class="panel-card">
+          <div class="panel-title">
+            <span>📱 工廠控制面板</span>
+            <span id="timerDisplay" style="font-family:monospace; color:var(--blue);">0.0s</span>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi-box">
+              <div class="kpi-label">完成數量</div>
+              <div class="kpi-value" id="kpiDone">0 / 3</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">品質良率</div>
+              <div class="kpi-value" id="kpiQuality" style="color:var(--emerald);">100%</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">AI 攔截異常</div>
+              <div class="kpi-value" id="kpiCaught" style="color:var(--amber);">0</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">目前進度</div>
+              <div class="kpi-value" id="kpiStep" style="font-size:14px;">待命</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-card" style="flex:1; display:flex; flex-direction:column;">
+          <div class="panel-title">
+            <span>📡 即時運作紀錄</span>
+            <button class="btn btn-ghost btn-sm" id="btnClearLog">清除</button>
+          </div>
+          <div class="log-feed" id="logFeed">
+            <div class="log-item">歡迎來到 3D AIoT 智慧工廠！可以用滑鼠旋轉 3D 工廠模型，確認製程路徑後按下「啟動生產」。</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Bottom AIoT Data Pipeline -->
+    <section class="aiot-pipeline">
+      <div class="pipeline-header">
+        <div class="pipeline-title">🌐 AIoT 即時資料流監控（從感測器到控制執行的 4 個關鍵步驟）</div>
+        <div style="font-size:12px; color:#94a3b8;">工廠運作時，資料會依序流經以下 4 個節點</div>
+      </div>
+      <div class="pipeline-nodes">
+        <div class="pipe-node" id="pipe1">
+          <div class="pipe-node-head">🌡️ 1. 感測資料</div>
+          <div class="pipe-node-data" id="pipe1Data">溫度: 25.4°C | 位置: 待命<br>數量: 0 | 影像: 就緒</div>
+        </div>
+        <div class="pipe-node" id="pipe2">
+          <div class="pipe-node-head">📶 2. 物聯網傳輸</div>
+          <div class="pipe-node-data" id="pipe2Data">協定: MQTT / Wi-Fi<br>延遲: 12ms | 封包: 待傳送</div>
+        </div>
+        <div class="pipe-node" id="pipe3">
+          <div class="pipe-node-head">🧠 3. AI 辨識判斷</div>
+          <div class="pipe-node-data" id="pipe3Data">模型: 視覺品檢 CNN<br>判定: 等待影像輸入...</div>
+        </div>
+        <div class="pipe-node" id="pipe4">
+          <div class="pipe-node-head">🦾 4. 控制執行</div>
+          <div class="pipe-node-data" id="pipe4Data">天車指令: 原點待機<br>站點設備: 靜止</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Science Learning Highlights -->
+    <section>
+      <div class="science-section-title">💡 科普學習重點（點擊卡片進行互動小測驗與探索）</div>
+      <div class="science-grid">
+        <div class="science-card" data-topic="sensor">
+          <div class="science-icon" style="background:#d1fae5; color:#047857;">⚙️</div>
+          <div><h4>感測與控制</h4><p>認識感測器、執行器與天車自動控制</p></div>
+        </div>
+        <div class="science-card" data-topic="iot">
+          <div class="science-icon" style="background:#e0f2fe; color:#0369a1;">📡</div>
+          <div><h4>物聯網通訊</h4><p>體驗感測資料如何即時連接與傳輸</p></div>
+        </div>
+        <div class="science-card" data-topic="ai">
+          <div class="science-icon" style="background:#fef3c7; color:#b45309;">🧠</div>
+          <div><h4>人工智慧辨識</h4><p>學習影像辨識、品質判定與異常偵測</p></div>
+        </div>
+        <div class="science-card" data-topic="ct">
+          <div class="science-icon" style="background:#ede9fe; color:#6d28d9;">🧩</div>
+          <div><h4>運算思維與問題解決</h4><p>分析瓶頸、規劃流程並持續優化</p></div>
+        </div>
+      </div>
+    </section>
+    </div><!-- end #managerTab -->
+
+    <!-- Employee Mode Tab -->
+    <div id="employeeTab" class="tab-pane">
+      <header class="top-header" style="grid-template-columns: 1fr 1.6fr;">
+        <div class="brand-card" style="background: linear-gradient(135deg, #065f46 0%, #0f172a 100%);">
+          <div class="brand-badge">👷 第一人稱 / 廠內值班模式</div>
+          <h1 class="brand-title">智慧工廠現場技術員</h1>
+          <p class="brand-subtitle">在 3D 工廠內自由走動！接收 IoT 手持平板警報，協助機器補料、降溫、復位與 AI 人機協作複檢。</p>
+        </div>
+        <div class="panel-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+          <div class="panel-title">
+            <span>📱 員工手持 IoT 派工平板</span>
+            <button class="btn btn-primary btn-sm" id="btnNewShift">🔄 重新指派值班工單</button>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="kpi-box">
+              <div class="kpi-label">已完成工單</div>
+              <div class="kpi-value" id="empDone">0 / 4</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">技術員積分</div>
+              <div class="kpi-value" id="empXP" style="color:var(--amber);">0 XP</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">目前靠近站別</div>
+              <div class="kpi-value" id="empNearStation" style="font-size:13px;">走道巡檢中</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="factory-layout">
+        <section class="factory-floor-card">
+          <div class="floor-topbar">
+            <div class="floor-title">
+              🚶 3D 廠內巡檢視角
+              <span style="font-size:12px; font-weight:600; color:var(--muted);">（W A S D 或方向鍵移動，靠近發光信標站台按 E 互動）</span>
+            </div>
+            <div class="camera-controls">
+              <button class="btn btn-ghost btn-sm" id="btnEmpCamToggle">👁️ 切換第一人稱視角</button>
+            </div>
+          </div>
+
+          <div class="viewport-3d-wrap" id="empViewportWrap" style="height:460px; cursor:default;">
+            <div id="empCanvasContainer" style="width:100%; height:100%;"></div>
+            <button class="emp-hud-prompt" id="empActionPrompt">🔧 [E] 處理此站工單</button>
+            <div class="emp-dpad" aria-label="虛擬方向鍵">
+              <div></div>
+              <button class="dpad-btn" data-dir="up">▲</button>
+              <div></div>
+              <button class="dpad-btn" data-dir="left">◀</button>
+              <button class="dpad-btn" data-dir="down">▼</button>
+              <button class="dpad-btn" data-dir="right">▶</button>
+            </div>
+            <div class="viewport-overlay-hint">⌨️ W/A/S/D 或方向鍵走動｜E 鍵互動｜右下角支援觸控移動</div>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <div class="panel-card" style="flex:1; display:flex; flex-direction:column;">
+            <div class="panel-title">
+              <span>🚨 目前待處理 IoT 警報</span>
+            </div>
+            <div id="empActiveTaskBox" class="emp-task-card"></div>
+            <div class="panel-title" style="margin-top:8px;">
+              <span>📋 值班工單清單</span>
+            </div>
+            <div id="empTaskList" class="log-feed" style="max-height:240px;"></div>
+          </div>
+        </aside>
+      </main>
+    </div><!-- end #employeeTab -->
+
+    <!-- Challenge Mode Tab (10 Levels) -->
+    <div id="challengeTab" class="tab-pane">
+      <header class="top-header" style="grid-template-columns: 1fr 1.6fr;">
+        <div class="brand-card" style="background: linear-gradient(135deg, #7c2d12 0%, #0f172a 100%);">
+          <div class="brand-badge">🔥 60 秒不停出題・3 血量生存挑戰</div>
+          <h1 class="brand-title">工廠員工 10 關搶修大作戰</h1>
+          <p class="brand-subtitle">每關 60 秒內會不停發生機器故障！共有 3 顆愛心血量，答錯或操作失誤扣 1 顆，歸零立即結束！</p>
+        </div>
+
+        <div class="panel-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-size:13px; color:var(--muted); font-weight:700;">目前關卡：</span>
+              <strong id="chalLevelTitle" style="font-size:15px; color:var(--navy);">第 1 關（入門）</strong>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <span id="chalHPText" style="font-size:20px; letter-spacing:2px;" title="剩餘血量">❤️❤️❤️</span>
+              <span id="chalTimerText" style="font-family:monospace; font-size:24px; font-weight:900; color:var(--blue);">60.0s</span>
+              <button class="btn btn-primary btn-sm" id="btnStartChallenge">▶ 開始挑戰</button>
+              <button class="btn btn-ghost btn-sm" id="btnUnlockAll" title="教學測試用：解鎖全部 10 關">🔓 全解鎖</button>
+            </div>
+          </div>
+          <div class="countdown-bar-wrap">
+            <div class="countdown-bar" id="chalCountdownBar"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:6px;">
+            <span id="chalRemainingText">已修復：0 次（過關目標：3 次）</span>
+            <span>⚠️ 失誤 / 答錯一次扣 1 顆 ❤️，沒血就結束！</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- 10 Level Selector Strip -->
+      <div class="level-strip" id="levelStrip"></div>
+
+      <!-- Main Challenge Arena: 3D Factory + Interactive Repair Workbench -->
+      <main class="factory-layout" style="grid-template-columns: 1.15fr 1fr;">
+        <section class="factory-floor-card">
+          <div class="floor-topbar">
+            <div class="floor-title">🚨 3D 產線搶修現場（點擊 3D 發紅光的故障機器）</div>
+          </div>
+          <div class="viewport-3d-wrap" id="chalViewportWrap" style="height:330px;">
+            <div id="chalCanvasContainer" style="width:100%; height:100%;"></div>
+            <div class="viewport-hover-tag" id="chalHoverTag"></div>
+            <div id="chalDamageFlash" style="position:absolute;inset:0;pointer-events:none;transition:box-shadow 0.2s;"></div>
+            <div class="viewport-overlay-hint">🖱️ 拖曳旋轉 3D 視角｜點擊閃紅燈的 3D 機台進行搶修</div>
+          </div>
+          <div class="fault-machines-grid" id="faultMachinesGrid" style="grid-template-columns: repeat(6, 1fr); gap:6px;"></div>
+        </section>
+
+        <aside class="workbench-panel" id="repairWorkbench">
+          <div style="text-align:center; padding:60px 20px; color:var(--muted);">
+            <div style="font-size:40px; margin-bottom:10px;">🧰</div>
+            <h3 style="color:var(--navy); margin-bottom:6px;">搶修工作台待機中</h3>
+            <p style="font-size:13px;">按下上方「▶ 開始本關挑戰」啟動 60 秒倒數，接著點擊左側發生故障（閃紅燈）的機器！</p>
+          </div>
+        </aside>
+      </main>
+    </div><!-- end #challengeTab -->
+  </div>
+
+  <!-- Results / Science Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">觀察結果與問題分析</h3>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    const STATIONS = {
+      1: { name: "原料入庫", duration: 1200, pos: [-4.6, 0, -2.1], sensor: "RFID 讀取標籤・紅外線計數", desc: "確認積木零件顏色與數量是否齊全，是所有生產的起點。" },
+      2: { name: "分類配料", duration: 1300, pos: [0, 0, -2.1], sensor: "RGB 顏色感測器・重量感測", desc: "依照訂單需求精準挑選車身與車輪積木，能大幅降低組裝出錯率。" },
+      3: { name: "模擬加工", duration: 1400, pos: [4.6, 0, -2.1], sensor: "溫度感測器・馬達轉速計", desc: "模擬鑽孔與修整零件，系統即時監控加工溫度避免過熱。" },
+      4: { name: "組裝作業", duration: 1500, pos: [-4.6, 0, 2.1], sensor: "超音波定位・力矩感測", desc: "機械手臂將積木零件精準組裝成積木小車。" },
+      5: { name: "AI 視覺品檢", duration: 1500, pos: [0, 0, 2.1], sensor: "高畫質攝影機 + AI 影像辨識", desc: "拍攝小車外觀，透過訓練好的 AI 模型判斷零件是否缺漏或裝歪（OK / NG）。" },
+      6: { name: "包裝出貨", duration: 1200, pos: [4.6, 0, 2.1], sensor: "光電感測・條碼掃描器", desc: "將合格品自動裝箱封口並記錄出貨數量。" }
+    };
+
+    const MISSIONS = {
+      standard: { name: "訂單 A：標準積木小車", product: "積木小車", targetQty: 3, timeLimit: 35, requireQualityCheck: true, requireSorting: false, reqText: "需 AI 品檢" },
+      express: { name: "訂單 B：急件客製雙色車", product: "雙色積木車", targetQty: 4, timeLimit: 42, requireQualityCheck: true, requireSorting: true, reqText: "限時 + 需配料與品檢" },
+      zeroDefect: { name: "訂單 C：高標準零缺陷出貨", product: "旗艦積木車", targetQty: 5, timeLimit: 55, requireQualityCheck: true, requireSorting: true, reqText: "良率需達 100%" }
+    };
+
+    const SCIENCE_TOPICS = {
+      sensor: {
+        title: "⚙️ 感測與控制：工廠的眼睛與雙手",
+        text: "感測器（Sensor）負責收集環境資訊，例如溫度、位置、重量或影像；執行器（Actuator）如三軸天車與機械手臂，則根據指令完成搬運與組裝。",
+        question: "在智慧工廠中，哪一個設備屬於「感測器」？",
+        options: [
+          { label: "A. 負責搬運積木的天車夾爪", correct: false, msg: "天車夾爪負責動作，屬於「執行器」喔！" },
+          { label: "B. 偵測零件顏色的 RGB 光學感測器", correct: true, msg: "答對了！感測器負責讀取物理資訊並轉換成數位訊號。" },
+          { label: "C. 裝箱用的紙箱", correct: false, msg: "紙箱是包材，不是感測器喔！" }
+        ]
+      },
+      iot: {
+        title: "📡 物聯網通訊：讓機器彼此對話",
+        text: "物聯網（IoT）透過 Wi-Fi、MQTT 等通訊協定，將各站感測到的資料即時傳送到雲端或控制面板，讓廠長不用站在機器旁也能遠端監控。",
+        question: "為什麼智慧工廠需要「即時」的物聯網傳輸？",
+        options: [
+          { label: "A. 讓機器異常時能立刻被發現並停止，減少浪費", correct: true, msg: "完全正確！即時傳輸能大幅縮短反應時間。" },
+          { label: "B. 只是為了讓控制面板看起來比較炫", correct: false, msg: "不只是視覺效果，即時資料是自動決策的基礎喔！" }
+        ]
+      },
+      ai: {
+        title: "🧠 人工智慧辨識：比人眼更穩定的品檢員",
+        text: "第 5 站「AI 視覺品檢」利用電腦視覺模型（例如 CNN），學習大量合格（OK）與瑕疵（NG）的照片，能在幾毫秒內判斷零件是否組裝正確。",
+        question: "如果流程跳過「AI 視覺品檢」直接包裝出貨，可能會發生什麼事？",
+        options: [
+          { label: "A. 瑕疵品無法被攔截，會直接送到客戶手上", correct: true, msg: "沒錯！缺乏品檢會導致不良品流出，降低客戶滿意度。" },
+          { label: "B. 瑕疵品會自動變成合格品", correct: false, msg: "不會自動變好喔，必須透過品檢攔截異常！" }
+        ]
+      },
+      ct: {
+        title: "🧩 運算思維與問題解決：小小廠長的優化策略",
+        text: "運算思維包含「拆解問題、找出規律、設計步驟（演算法）與持續優化」。當製程太慢或良率太低時，調整站別順序就是最佳化演算法的實踐！",
+        question: "如果工廠交貨常常「超時」，下列哪一種調整最合理？",
+        options: [
+          { label: "A. 刪掉非必要或重複的站別，保留關鍵步驟（如 1→3→5→6）", correct: true, msg: "正確！在滿足品質要求下精簡流程，能有效縮短總時間。" },
+          { label: "B. 把所有站別都排兩遍", correct: false, msg: "重複站別會讓製程時間加倍喔！" }
+        ]
+      }
+    };
+
+    // App State
+    let currentMissionKey = "standard";
+    let route = [1, 2, 3, 4, 5, 6];
+    let isRunning = false;
+    let stopRequested = false;
+    let defectNextCar = false;
+    let inspectMode = false;
+
+    // DOM Elements
+    const missionSelect = document.getElementById("missionSelect");
+    const missionMeta = document.getElementById("missionMeta");
+    const routePreview = document.getElementById("routePreview");
+    const factoryStatusPill = document.getElementById("factoryStatusPill");
+    const factoryStatusText = document.getElementById("factoryStatusText");
+    const timerDisplay = document.getElementById("timerDisplay");
+    const kpiDone = document.getElementById("kpiDone");
+    const kpiQuality = document.getElementById("kpiQuality");
+    const kpiCaught = document.getElementById("kpiCaught");
+    const kpiStep = document.getElementById("kpiStep");
+    const logFeed = document.getElementById("logFeed");
+    const btnStart = document.getElementById("btnStartFactory");
+    const btnReset = document.getElementById("btnResetFactory");
+    const btnInjectDefect = document.getElementById("btnInjectDefect");
+    const speedSelect = document.getElementById("speedSelect");
+    const hoverTag = document.getElementById("hoverTag");
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+
+    // ================= THREE.JS 3D FACTORY =================
+    let scene, camera, renderer, controls;
+    let gantryBridge, gantryTrolley, gantryHoist, carriedCarGroup, floorCarGroup;
+    let stationGroups = {};
+    let stationLEDs = {};
+    let stationAnimParts = {};
+    let aiScanCone, aiScreenMat;
+    let craneTarget = { x: -4.6, z: -2.1, hoistY: 2.3 };
+    let craneCurrent = { x: -4.6, z: -2.1, hoistY: 2.3 };
+    let activeStationId = null;
+
+    function createLabelSprite(text, bgColor = "#0f172a") {
+      const canvas = document.createElement("canvas");
+      canvas.width = 320;
+      canvas.height = 80;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = bgColor;
+      ctx.beginPath();
+      ctx.roundRect(8, 8, 304, 64, 18);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 32px 'Noto Sans TC', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 160, 42);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(2.3, 0.58, 1);
+      return sprite;
+    }
+
+    function createBlockCar(isDefect = false) {
+      const car = new THREE.Group();
+      const bodyGeo = new THREE.BoxGeometry(0.95, 0.34, 0.56);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: isDefect ? 0xef4444 : 0x2563eb, roughness: 0.4 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 0.22;
+      body.castShadow = true;
+      car.add(body);
+
+      const cabGeo = new THREE.BoxGeometry(0.48, 0.26, 0.48);
+      const cabMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4 });
+      const cab = new THREE.Mesh(cabGeo, cabMat);
+      cab.position.set(0.05, 0.50, 0);
+      if (isDefect) cab.rotation.z = 0.28; // Tilted cab for visual defect
+      cab.castShadow = true;
+      car.add(cab);
+
+      const wheelGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.1, 16);
+      wheelGeo.rotateX(Math.PI / 2);
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+      [[-0.28, 0.14, 0.3], [0.28, 0.14, 0.3], [-0.28, 0.14, -0.3], [0.28, 0.14, -0.3]].forEach(([wx, wy, wz]) => {
+        const w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.position.set(wx, wy, wz);
+        car.add(w);
+      });
+      return car;
+    }
+
+    function init3DFactory() {
+      const container = document.getElementById("threeCanvasContainer");
+      if (!window.THREE) {
+        container.innerHTML = `<div style="padding:40px;text-align:center;color:#475569;font-weight:700;">無法載入 Three.js 3D 引擎（請確認網路連線）。</div>`;
+        return;
+      }
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xe6f0fa);
+      scene.fog = new THREE.Fog(0xe6f0fa, 22, 48);
+
+      const w = container.clientWidth || 800;
+      const h = container.clientHeight || 430;
+      camera = new THREE.PerspectiveCamera(44, w / h, 0.1, 100);
+      camera.position.set(0, 10.5, 13.5);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.07;
+      controls.maxPolarAngle = Math.PI / 2.12;
+      controls.minDistance = 6;
+      controls.maxDistance = 24;
+      controls.target.set(0, 0.8, 0);
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+      dirLight.position.set(8, 15, 10);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.camera.near = 1;
+      dirLight.shadow.camera.far = 35;
+      dirLight.shadow.camera.left = -10;
+      dirLight.shadow.camera.right = 10;
+      dirLight.shadow.camera.top = 10;
+      dirLight.shadow.camera.bottom = -10;
+      scene.add(dirLight);
+
+      // Factory Baseplate
+      const baseGeo = new THREE.BoxGeometry(15.2, 0.35, 9.2);
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.7 });
+      const base = new THREE.Mesh(baseGeo, baseMat);
+      base.position.y = -0.18;
+      base.receiveShadow = true;
+      scene.add(base);
+
+      const grid = new THREE.GridHelper(15, 30, 0x94a3b8, 0xcbd5e1);
+      grid.position.y = 0.01;
+      scene.add(grid);
+
+      // Overhead Gantry Frame (4 Blue Pillars + 2 Side Rails)
+      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+      const railMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.35 });
+
+      [[-6.8, -3.8], [6.8, -3.8], [-6.8, 3.8], [6.8, 3.8]].forEach(([px, pz]) => {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.38, 4.4, 0.38), pillarMat);
+        pillar.position.set(px, 2.2, pz);
+        pillar.castShadow = true;
+        scene.add(pillar);
+      });
+
+      [-3.8, 3.8].forEach((rz) => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(14.0, 0.28, 0.32), railMat);
+        rail.position.set(0, 4.35, rz);
+        rail.castShadow = true;
+        scene.add(rail);
+      });
+
+      // Moving Gantry Bridge (X-axis)
+      gantryBridge = new THREE.Group();
+      const bridgeBeam = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.32, 7.9), darkMat);
+      bridgeBeam.position.y = 4.55;
+      bridgeBeam.castShadow = true;
+      gantryBridge.add(bridgeBeam);
+
+      // Moving Trolley (Z-axis)
+      gantryTrolley = new THREE.Group();
+      const trolleyBox = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.42, 0.75), new THREE.MeshStandardMaterial({ color: 0x0ea5e9 }));
+      trolleyBox.position.y = 4.55;
+      gantryTrolley.add(trolleyBox);
+
+      // Hoist Cable + Claw + Carried Car
+      gantryHoist = new THREE.Group();
+      const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.4, 8), darkMat);
+      cable.position.y = 1.2;
+      gantryHoist.add(cable);
+
+      const claw = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.14, 0.45), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+      gantryHoist.add(claw);
+
+      carriedCarGroup = createBlockCar(false);
+      carriedCarGroup.position.y = -0.58;
+      carriedCarGroup.visible = false;
+      gantryHoist.add(carriedCarGroup);
+
+      gantryHoist.position.y = 2.3;
+      gantryTrolley.add(gantryHoist);
+      gantryBridge.add(gantryTrolley);
+      gantryBridge.position.x = -4.6;
+      gantryTrolley.position.z = -2.1;
+      scene.add(gantryBridge);
+
+      // Floor active car (shown when sitting on a station)
+      floorCarGroup = createBlockCar(false);
+      floorCarGroup.visible = false;
+      scene.add(floorCarGroup);
+
+      // Build 6 Modular 3D Stations
+      Object.entries(STATIONS).forEach(([idStr, st]) => {
+        const id = Number(idStr);
+        const group = new THREE.Group();
+        group.position.set(st.pos[0], 0, st.pos[2]);
+        group.userData.stationId = id;
+
+        // Platform base
+        const plat = new THREE.Mesh(
+          new THREE.BoxGeometry(3.4, 0.22, 2.5),
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 })
+        );
+        plat.position.y = 0.11;
+        plat.receiveShadow = true;
+        plat.castShadow = true;
+        plat.userData.stationId = id;
+        group.add(plat);
+
+        // Status LED beacon
+        const ledMat = new THREE.MeshStandardMaterial({ color: 0x64748b, emissive: 0x000000 });
+        const led = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), ledMat);
+        led.position.set(1.4, 0.36, 1.0);
+        group.add(led);
+        stationLEDs[id] = ledMat;
+
+        // Station-specific 3D machinery
+        if (id === 1) {
+          // Warehouse Rack with colored blocks
+          const rack = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.6, 0.8), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+          rack.position.set(-0.5, 1.0, -0.5);
+          rack.castShadow = true;
+          group.add(rack);
+          const colors = [0xef4444, 0x3b82f6, 0xfacc15];
+          for (let r = 0; r < 2; r++) {
+            for (let c = 0; c < 3; c++) {
+              const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.45), new THREE.MeshStandardMaterial({ color: colors[(r + c) % 3] }));
+              box.position.set(-1.0 + c * 0.5, 0.65 + r * 0.65, -0.35);
+              group.add(box);
+            }
+          }
+        } else if (id === 2) {
+          // Sorting Conveyor & Blocks
+          const belt = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.25, 0.9), darkMat);
+          belt.position.set(0, 0.34, 0);
+          group.add(belt);
+          const diverter = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.35, 0.9), new THREE.MeshStandardMaterial({ color: 0x0ea5e9 }));
+          diverter.position.set(0, 0.62, -0.2);
+          group.add(diverter);
+          stationAnimParts[2] = diverter;
+        } else if (id === 3) {
+          // CNC Processing Arch + Moving Spindle
+          const archL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.7, 0.4), new THREE.MeshStandardMaterial({ color: 0xf97316 }));
+          archL.position.set(-0.9, 1.05, 0);
+          const archR = archL.clone();
+          archR.position.x = 0.9;
+          const topBar = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.35, 0.5), new THREE.MeshStandardMaterial({ color: 0xf97316 }));
+          topBar.position.set(0, 1.8, 0);
+          const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.08, 0.7, 12), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+          spindle.position.set(0, 1.35, 0);
+          group.add(archL, archR, topBar, spindle);
+          stationAnimParts[3] = spindle;
+        } else if (id === 4) {
+          // Robotic Assembly Arm
+          const armBase = new THREE.Group();
+          armBase.position.set(-0.8, 0.22, -0.4);
+          const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.4, 16), darkMat);
+          ped.position.y = 0.2;
+          const arm1 = new THREE.Mesh(new THREE.BoxGeometry(0.24, 1.1, 0.24), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
+          arm1.position.set(0.2, 0.85, 0);
+          arm1.rotation.z = -0.35;
+          const arm2 = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+          arm2.position.set(0.7, 1.25, 0);
+          armBase.add(ped, arm1, arm2);
+          group.add(armBase);
+          stationAnimParts[4] = armBase;
+        } else if (id === 5) {
+          // AI Vision Inspection Camera + Scan Cone + Monitor
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.8, 12), darkMat);
+          post.position.set(-0.8, 1.1, -0.6);
+          const camBox = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.3, 0.35), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+          camBox.position.set(-0.2, 1.85, -0.2);
+          camBox.rotation.x = 0.5;
+          aiScanCone = new THREE.Mesh(
+            new THREE.ConeGeometry(0.75, 1.5, 24, 1, true),
+            new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
+          );
+          aiScanCone.position.set(0, 1.0, 0);
+          aiScanCone.visible = false;
+
+          aiScreenMat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x064e3b });
+          const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.65, 0.1), aiScreenMat);
+          monitor.position.set(1.05, 0.85, -0.6);
+          group.add(post, camBox, aiScanCone, monitor);
+        } else if (id === 6) {
+          // Packaging Boxes
+          const boxMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 });
+          const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.65), boxMat);
+          b1.position.set(-0.6, 0.5, -0.4);
+          const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.65), boxMat);
+          b2.position.set(0.7, 0.5, -0.4);
+          group.add(b1, b2);
+        }
+
+        const label = createLabelSprite(`${id}. ${st.name}`);
+        label.position.set(0, 2.55, 0);
+        group.add(label);
+
+        scene.add(group);
+        stationGroups[id] = group;
+      });
+
+      // Raycasting for Click & Hover on 3D Stations
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      let downPos = { x: 0, y: 0 };
+
+      renderer.domElement.addEventListener("pointerdown", (e) => {
+        downPos = { x: e.clientX, y: e.clientY };
+      });
+
+      renderer.domElement.addEventListener("pointermove", (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(Object.values(stationGroups), true);
+        let foundId = null;
+        for (const h of hits) {
+          let obj = h.object;
+          while (obj && !obj.userData.stationId) obj = obj.parent;
+          if (obj && obj.userData.stationId) { foundId = obj.userData.stationId; break; }
+        }
+        if (foundId) {
+          hoverTag.style.display = "block";
+          hoverTag.textContent = inspectMode
+            ? `🔍 點擊查看：${foundId}. ${STATIONS[foundId].name}`
+            : `➕ 點擊加入製程：${foundId}. ${STATIONS[foundId].name}`;
+          renderer.domElement.style.cursor = "pointer";
+        } else {
+          hoverTag.style.display = "none";
+          renderer.domElement.style.cursor = "grab";
+        }
+      });
+
+      renderer.domElement.addEventListener("pointerup", (e) => {
+        const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+        if (dist > 6) return; // Dragging camera, not clicking
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(Object.values(stationGroups), true);
+        for (const h of hits) {
+          let obj = h.object;
+          while (obj && !obj.userData.stationId) obj = obj.parent;
+          if (obj && obj.userData.stationId) {
+            handleStationSelect(obj.userData.stationId);
+            break;
+          }
+        }
+      });
+
+      // Resize handler
+      window.addEventListener("resize", () => {
+        const nw = container.clientWidth;
+        const nh = container.clientHeight;
+        if (!nw || !nh) return;
+        camera.aspect = nw / nh;
+        camera.updateProjectionMatrix();
+        renderer.setSize(nw, nh);
+      });
+
+      // Render Loop
+      const clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+
+        // Smooth 3-axis gantry crane interpolation
+        craneCurrent.x += (craneTarget.x - craneCurrent.x) * 0.12;
+        craneCurrent.z += (craneTarget.z - craneCurrent.z) * 0.12;
+        craneCurrent.hoistY += (craneTarget.hoistY - craneCurrent.hoistY) * 0.16;
+
+        gantryBridge.position.x = craneCurrent.x;
+        gantryTrolley.position.z = craneCurrent.z;
+        gantryHoist.position.y = craneCurrent.hoistY;
+
+        // Active station animations
+        if (activeStationId === 2 && stationAnimParts[2]) {
+          stationAnimParts[2].rotation.y = Math.sin(t * 8) * 0.45;
+        }
+        if (activeStationId === 3 && stationAnimParts[3]) {
+          stationAnimParts[3].position.y = 1.25 + Math.sin(t * 10) * 0.22;
+        }
+        if (activeStationId === 4 && stationAnimParts[4]) {
+          stationAnimParts[4].rotation.y = Math.sin(t * 5) * 0.55;
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    function setCameraView(pos, target) {
+      if (!camera || !controls) return;
+      camera.position.set(...pos);
+      controls.target.set(...target);
+      controls.update();
+    }
+
+    // ================= SIMULATION LOGIC =================
+    function addLog(msg, type = "") {
+      const div = document.createElement("div");
+      div.className = `log-item ${type}`;
+      div.textContent = msg;
+      logFeed.prepend(div);
+    }
+
+    function updateMissionUI() {
+      const m = MISSIONS[currentMissionKey];
+      missionMeta.innerHTML = `
+        <span>產品：<strong>${m.product}</strong></span>
+        <span>數量：<strong>${m.targetQty} 台</strong></span>
+        <span>交貨：<strong>${m.timeLimit} 秒</strong></span>
+        <span>要求：<strong>${m.reqText}</strong></span>
+      `;
+      kpiDone.textContent = `0 / ${m.targetQty}`;
+    }
+
+    function renderRoute() {
+      routePreview.innerHTML = "";
+      document.querySelectorAll(".station-pill-btn").forEach(b => b.classList.remove("selected"));
+
+      if (route.length === 0) {
+        routePreview.innerHTML = `<span style="font-size:12px;color:#94a3b8;">請點擊 3D 站台或下方按鈕加入製程...</span>`;
+        return;
+      }
+
+      route.forEach((id, idx) => {
+        const chip = document.createElement("span");
+        chip.className = "route-chip";
+        chip.textContent = `${id} ${STATIONS[id].name} ✕`;
+        chip.onclick = () => {
+          if (isRunning) return;
+          route.splice(idx, 1);
+          renderRoute();
+        };
+        routePreview.appendChild(chip);
+
+        if (idx < route.length - 1) {
+          const arrow = document.createElement("span");
+          arrow.className = "route-arrow";
+          arrow.textContent = "→";
+          routePreview.appendChild(arrow);
+        }
+
+        const btn = document.querySelector(`.station-pill-btn[data-id="${id}"]`);
+        if (btn) btn.classList.add("selected");
+      });
+    }
+
+    function handleStationSelect(id) {
+      if (inspectMode) {
+        const st = STATIONS[id];
+        modalTitle.textContent = `🔧 第 ${id} 站：${st.name}`;
+        modalBody.innerHTML = `
+          <p style="font-size:14px; margin-bottom:10px;">${st.desc}</p>
+          <div style="background:var(--cyan-soft); color:#0369a1; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:700;">
+            使用感測與控制元件：${st.sensor}
+          </div>
+        `;
+        modalBackdrop.classList.add("open");
+        return;
+      }
+      if (isRunning) return;
+      if (route.length >= 8) {
+        addLog("⚠️ 製程最多可串接 8 個站別！", "warn");
+        return;
+      }
+      route.push(id);
+      renderRoute();
+    }
+
+    function setPipelineNode(stepNum, text) {
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`pipe${i}`).classList.toggle("lit", i === stepNum);
+      }
+      if (text) document.getElementById(`pipe${stepNum}Data`).innerHTML = text;
+    }
+
+    function sleep(ms) {
+      const speed = Number(speedSelect.value) || 1;
+      return new Promise(resolve => setTimeout(resolve, ms / speed));
+    }
+
+    function setStationHighlight(id, state) {
+      activeStationId = state === "active" ? id : null;
+      const btn = document.querySelector(`.station-pill-btn[data-id="${id}"]`);
+      if (btn) {
+        btn.classList.remove("active-work", "error-work");
+        if (state === "active") btn.classList.add("active-work");
+        if (state === "error") btn.classList.add("error-work");
+      }
+      if (stationLEDs[id]) {
+        if (state === "active") {
+          stationLEDs[id].color.setHex(0xf59e0b);
+          stationLEDs[id].emissive.setHex(0xb45309);
+        } else if (state === "error") {
+          stationLEDs[id].color.setHex(0xef4444);
+          stationLEDs[id].emissive.setHex(0x991b1b);
+        } else {
+          stationLEDs[id].color.setHex(0x64748b);
+          stationLEDs[id].emissive.setHex(0x000000);
+        }
+      }
+    }
+
+    async function runFactory() {
+      if (isRunning) return;
+      if (route.length === 0) {
+        addLog("⚠️ 尚未規劃任何製程站別！請先選擇站別。", "warn");
+        return;
+      }
+
+      isRunning = true;
+      stopRequested = false;
+      btnStart.disabled = true;
+      missionSelect.disabled = true;
+      factoryStatusPill.className = "status-pill running";
+      factoryStatusText.textContent = "3D 智慧工廠運作中・自動搬運與即時監控";
+
+      const mission = MISSIONS[currentMissionKey];
+      let completed = 0, goodCount = 0, caughtDefects = 0, shippedDefects = 0, elapsedSimSec = 0;
+
+      kpiCaught.textContent = "0";
+      kpiQuality.textContent = "100%";
+      kpiDone.textContent = `0 / ${mission.targetQty}`;
+
+      const hasStart = route.includes(1);
+      const hasSorting = route.includes(2);
+      const hasAssembly = route.includes(4);
+      const hasAI = route.includes(5);
+      const hasPackaging = route.includes(6);
+
+      addLog(`🚀 開始執行「${mission.name}」，路徑：${route.join(" → ")}`, "ok");
+
+      const startTime = performance.now();
+      const timerInterval = setInterval(() => {
+        if (!isRunning) { clearInterval(timerInterval); return; }
+        const speed = Number(speedSelect.value) || 1;
+        elapsedSimSec = ((performance.now() - startTime) / 1000) * speed;
+        timerDisplay.textContent = `${elapsedSimSec.toFixed(1)}s`;
+      }, 100);
+
+      for (let carIdx = 1; carIdx <= mission.targetQty; carIdx++) {
+        if (stopRequested) break;
+        let hasDefect = defectNextCar || (!hasSorting && carIdx === 2) || (!hasAssembly && carIdx === 1);
+        defectNextCar = false;
+        btnInjectDefect.classList.remove("active");
+
+        let carScrapped = false;
+        kpiStep.textContent = `第 ${carIdx} 台生產中`;
+
+        for (let rIdx = 0; rIdx < route.length; rIdx++) {
+          if (stopRequested) break;
+          const stId = route[rIdx];
+          const st = STATIONS[stId];
+
+          // 1. 3D Gantry Crane moves to station
+          setPipelineNode(4, `天車指令: 搬運第 ${carIdx} 台前往 [${stId}]<br>目標座標: (${st.pos[0]}, ${st.pos[2]})`);
+          if (carriedCarGroup) carriedCarGroup.visible = rIdx > 0;
+          if (floorCarGroup) floorCarGroup.visible = false;
+          craneTarget = { x: st.pos[0], z: st.pos[2], hoistY: 2.3 };
+          await sleep(550);
+          if (stopRequested) break;
+
+          // Lower hoist & drop car onto station
+          craneTarget.hoistY = 1.05;
+          await sleep(280);
+          if (carriedCarGroup) carriedCarGroup.visible = false;
+          if (floorCarGroup) {
+            floorCarGroup.position.set(st.pos[0], 0.22, st.pos[2]);
+            floorCarGroup.visible = true;
+          }
+          craneTarget.hoistY = 2.3;
+          setStationHighlight(stId, "active");
+
+          // 2. Sensor Data
+          const temp = (25 + Math.random() * 6 + (stId === 3 ? 18 : 0)).toFixed(1);
+          setPipelineNode(1, `溫度: ${temp}°C | 站別: #${stId}<br>感測: ${st.sensor}`);
+          await sleep(st.duration * 0.35);
+          if (stopRequested) { setStationHighlight(stId, "idle"); break; }
+
+          // 3. IoT Transmission
+          const latency = Math.floor(8 + Math.random() * 14);
+          setPipelineNode(2, `協定: MQTT / TLS | 站別 #${stId}<br>延遲: ${latency}ms | 封包已送達`);
+          await sleep(st.duration * 0.25);
+
+          // 4. AI Judgment
+          if (stId === 5) {
+            if (aiScanCone) aiScanCone.visible = true;
+            if (hasDefect) {
+              setPipelineNode(3, `模型: CNN 視覺品檢<br>判定: <span style="color:#f87171;font-weight:900;">NG 異常 (信心度 97.4%)</span>`);
+              if (aiScreenMat) { aiScreenMat.color.setHex(0xef4444); aiScreenMat.emissive.setHex(0x991b1b); }
+              setStationHighlight(stId, "error");
+              caughtDefects++;
+              kpiCaught.textContent = String(caughtDefects);
+              addLog(`⚠️ 第 ${carIdx} 台在「AI 視覺品檢」發現瑕疵 (NG)，已自動攔截！`, "err");
+              await sleep(750);
+              if (aiScanCone) aiScanCone.visible = false;
+              setStationHighlight(stId, "idle");
+              carScrapped = true;
+              break;
+            } else {
+              setPipelineNode(3, `模型: CNN 視覺品檢<br>判定: <span style="color:#34d399;font-weight:900;">OK 合格 (信心度 99.2%)</span>`);
+              if (aiScreenMat) { aiScreenMat.color.setHex(0x10b981); aiScreenMat.emissive.setHex(0x064e3b); }
+              addLog(`✅ 第 ${carIdx} 台通過 AI 視覺品檢 (OK)`, "ok");
+            }
+          } else {
+            setPipelineNode(3, `異常偵測: 設備狀態正常<br>溫度/定位皆在安全範圍內`);
+          }
+
+          await sleep(st.duration * 0.4);
+          if (aiScanCone) aiScanCone.visible = false;
+          setStationHighlight(stId, "idle");
+        }
+
+        if (stopRequested) break;
+        if (floorCarGroup) floorCarGroup.visible = false;
+        if (carriedCarGroup) carriedCarGroup.visible = false;
+
+        if (!carScrapped) {
+          completed++;
+          if (hasDefect && !hasAI) {
+            shippedDefects++;
+            addLog(`📦 第 ${carIdx} 台完成，但未經 AI 品檢，瑕疵品已流出！`, "warn");
+          } else {
+            goodCount++;
+          }
+          kpiDone.textContent = `${completed} / ${mission.targetQty}`;
+        }
+
+        const totalProcessed = completed + caughtDefects;
+        const rate = totalProcessed > 0 ? Math.round((goodCount / totalProcessed) * 100) : 100;
+        kpiQuality.textContent = `${rate}%`;
+      }
+
+      clearInterval(timerInterval);
+      isRunning = false;
+      activeStationId = null;
+      btnStart.disabled = false;
+      missionSelect.disabled = false;
+      Object.keys(STATIONS).forEach(id => setStationHighlight(Number(id), "idle"));
+
+      if (!stopRequested) {
+        factoryStatusPill.className = "status-pill";
+        factoryStatusText.textContent = "生產完成・請查看觀察結果";
+        kpiStep.textContent = "已完成";
+        showResultModal(mission, completed, goodCount, caughtDefects, shippedDefects, elapsedSimSec, {
+          hasStart, hasSorting, hasAssembly, hasAI, hasPackaging
+        });
+      }
+    }
+
+    function showResultModal(mission, completed, goodCount, caughtDefects, shippedDefects, elapsed, flags) {
+      const onTime = elapsed <= mission.timeLimit;
+      const qualityRate = completed > 0 ? Math.round((goodCount / completed) * 100) : 0;
+      const notes = [];
+
+      if (!flags.hasStart) notes.push({ type: "bad", text: "❌ 缺少「① 原料入庫」：工廠無法自動確認庫存原料，實務上會導致斷料風險。" });
+      if (mission.requireSorting && !flags.hasSorting) notes.push({ type: "bad", text: "⚠️ 缺少「② 分類配料」：未先分類配料，導致生產過程中出現零件配錯的異常。" });
+      if (!flags.hasAssembly) notes.push({ type: "bad", text: "⚠️ 缺少「④ 組裝作業」：產品未經過完整組裝，影響成品結構完整性。" });
+      if (mission.requireQualityCheck && !flags.hasAI) notes.push({ type: "bad", text: "🚨 缺少「⑤ AI 視覺品檢」：未能攔截不良品，導致瑕疵品直接流入市場！" });
+      else if (flags.hasAI && caughtDefects > 0) notes.push({ type: "good", text: `🧠 AI 視覺品檢成功發揮作用！即時攔截了 ${caughtDefects} 台異常品，守護出貨品質。` });
+      if (!flags.hasPackaging) notes.push({ type: "bad", text: "⚠️ 缺少「⑥ 包裝出貨」：成品未完成裝箱與條碼登錄。" });
+      if (route.indexOf(6) !== -1 && route.indexOf(4) !== -1 && route.indexOf(6) < route.indexOf(4)) notes.push({ type: "bad", text: "🔀 邏輯順序異常：「包裝出貨」排在「組裝作業」之前，違反生產順序！" });
+      if (!onTime) notes.push({ type: "bad", text: `⏱️ 製程超時（${elapsed.toFixed(1)}s > ${mission.timeLimit}s）：試著優化站別數量或減少不必要步驟！` });
+      else notes.push({ type: "good", text: `⏱️ 準時交貨！總耗時 ${elapsed.toFixed(1)} 秒，符合 ${mission.timeLimit} 秒的交貨期限。` });
+
+      if (notes.every(n => n.type === "good") && shippedDefects === 0 && completed >= mission.targetQty) {
+        notes.unshift({ type: "good", text: "🏆 完美達成任務！你是一位兼具效率與品質的優秀 3D AIoT 智慧廠長！" });
+      }
+
+      modalTitle.textContent = "📊 觀察結果與問題分析";
+      modalBody.innerHTML = `
+        <div class="kpi-grid" style="margin-bottom:12px;">
+          <div class="kpi-box"><div class="kpi-label">完成出貨數</div><div class="kpi-value">${completed} / ${mission.targetQty}</div></div>
+          <div class="kpi-box"><div class="kpi-label">出貨良率</div><div class="kpi-value" style="color:${qualityRate===100?'var(--emerald)':'var(--red)'}">${qualityRate}%</div></div>
+          <div class="kpi-box"><div class="kpi-label">製程總時間</div><div class="kpi-value">${elapsed.toFixed(1)}s</div></div>
+          <div class="kpi-box"><div class="kpi-label">AI 攔截異常</div><div class="kpi-value">${caughtDefects} 台</div></div>
+        </div>
+        <ul class="analysis-list">${notes.map(n => `<li class="${n.type}">${n.text}</li>`).join("")}</ul>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+          <button class="btn btn-primary" onclick="closeModal()">🔄 調整流程，再次挑戰</button>
+        </div>
+      `;
+      modalBackdrop.classList.add("open");
+    }
+
+    function openScienceModal(topicKey) {
+      const t = SCIENCE_TOPICS[topicKey];
+      modalTitle.textContent = t.title;
+      modalBody.innerHTML = `
+        <p style="font-size:14px; color:var(--text); margin-bottom:14px;">${t.text}</p>
+        <div style="background:var(--surface-alt); border:1px solid var(--border); border-radius:12px; padding:12px;">
+          <div style="font-weight:800; font-size:14px; margin-bottom:8px;">📝 科普隨堂考：${t.question}</div>
+          <div class="quiz-options" id="quizOptions"></div>
+          <div id="quizFeedback" style="margin-top:10px; font-size:13px; font-weight:700;"></div>
+        </div>
+      `;
+      const optsEl = document.getElementById("quizOptions");
+      const fbEl = document.getElementById("quizFeedback");
+      t.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "quiz-opt";
+        btn.textContent = opt.label;
+        btn.onclick = () => {
+          fbEl.style.color = opt.correct ? "var(--emerald)" : "var(--red)";
+          fbEl.textContent = (opt.correct ? "🎉 " : "💡 ") + opt.msg;
+        };
+        optsEl.appendChild(btn);
+      });
+      modalBackdrop.classList.add("open");
+    }
+
+    function closeModal() { modalBackdrop.classList.remove("open"); }
+
+    // Event Bindings
+    missionSelect.addEventListener("change", (e) => {
+      currentMissionKey = e.target.value;
+      updateMissionUI();
+      addLog(`📋 已切換任務：${MISSIONS[currentMissionKey].name}`);
+    });
+
+    document.getElementById("btnPresetRecommended").onclick = () => { if (!isRunning) { route = [1, 2, 3, 4, 5, 6]; renderRoute(); } };
+    document.getElementById("btnPresetFast").onclick = () => { if (!isRunning) { route = [1, 3, 5, 6]; renderRoute(); } };
+    document.getElementById("btnClearRoute").onclick = () => { if (!isRunning) { route = []; renderRoute(); } };
+
+    document.getElementById("btnInspectMode").onclick = (e) => {
+      inspectMode = !inspectMode;
+      e.target.textContent = inspectMode ? "✅ 正在檢視設備原理（點擊站別）" : "🔍 查看各站硬體原理";
+    };
+
+    document.querySelectorAll(".station-pill-btn").forEach(btn => {
+      btn.addEventListener("click", () => handleStationSelect(Number(btn.dataset.id)));
+    });
+
+    document.getElementById("camDefault").onclick = () => setCameraView([0, 10.5, 13.5], [0, 0.8, 0]);
+    document.getElementById("camTop").onclick = () => setCameraView([0, 16, 0.1], [0, 0, 0]);
+    document.getElementById("camAI").onclick = () => setCameraView([2.8, 4.2, 6.2], [0, 0.9, 2.1]);
+
+    btnStart.onclick = runFactory;
+
+    btnReset.onclick = () => {
+      stopRequested = true;
+      isRunning = false;
+      activeStationId = null;
+      btnStart.disabled = false;
+      missionSelect.disabled = false;
+      timerDisplay.textContent = "0.0s";
+      factoryStatusPill.className = "status-pill";
+      factoryStatusText.textContent = "系統就緒・請規劃製程";
+      kpiStep.textContent = "待命";
+      if (floorCarGroup) floorCarGroup.visible = false;
+      if (carriedCarGroup) carriedCarGroup.visible = false;
+      if (aiScanCone) aiScanCone.visible = false;
+      craneTarget = { x: -4.6, z: -2.1, hoistY: 2.3 };
+      Object.keys(STATIONS).forEach(id => setStationHighlight(Number(id), "idle"));
+      setPipelineNode(1, "溫度: 25.4°C | 位置: 待命<br>數量: 0 | 影像: 就緒");
+      updateMissionUI();
+    };
+
+    btnInjectDefect.onclick = () => {
+      defectNextCar = !defectNextCar;
+      btnInjectDefect.classList.toggle("active", defectNextCar);
+      addLog(defectNextCar ? "⚠️ 已排程下一台為異常瑕疵品，觀察 AI 是否能成功攔截！" : "已取消模擬異常品。", "warn");
+    };
+
+    document.getElementById("btnClearLog").onclick = () => { logFeed.innerHTML = ""; };
+    document.querySelectorAll(".science-card").forEach(c => c.addEventListener("click", () => openScienceModal(c.dataset.topic)));
+    document.getElementById("modalClose").onclick = closeModal;
+    modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeModal(); });
+
+    // Init
+    updateMissionUI();
+    renderRoute();
+    init3DFactory();
+
+    // ================= TAB SWITCHING & EMPLOYEE MODE =================
+    let activeTab = "managerTab";
+    let empInitialized = false;
+    let empScene, empCamera, empRenderer, empAvatar, empBeacon;
+    let empFirstPerson = false;
+    let empPos = { x: 0, z: 0.2, rotY: 0 };
+    let empKeys = { up: false, down: false, left: false, right: false };
+    let empTasks = [];
+    let empCurrentTaskIdx = 0;
+    let empXP = 0;
+    let empNearStationId = null;
+
+    const EMP_TASK_TEMPLATES = [
+      { stationId: 1, title: "原料補貨：黃色積木不足", alert: "RFID 感測器偵測黃色積木儲位為 0！", xp: 50 },
+      { stationId: 2, title: "感測器校準：RGB 分類偏移", alert: "顏色感測器讀數飄移，需要人工對齊校準。", xp: 60 },
+      { stationId: 3, title: "設備降溫：主軸溫度 58°C 過熱", alert: "IoT 溫度感測器觸發高溫警報！請立即降溫。", xp: 70 },
+      { stationId: 4, title: "機械手臂復位：力矩異常停機", alert: "組裝機械臂偵測卡榫阻力過大，請檢查復位。", xp: 70 },
+      { stationId: 5, title: "AI 人機協作：模糊樣本複檢", alert: "AI 視覺信心度僅 62%，請求人類員工協助標註！", xp: 80 },
+      { stationId: 6, title: "條碼封箱：急件出貨掃描", alert: "等待員工掃描條碼並封箱出貨。", xp: 50 }
+    ];
+
+    document.querySelectorAll(".mode-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.tab;
+        activeTab = target;
+        document.querySelectorAll(".mode-tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+        document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === target));
+
+        if (target === "managerTab" && renderer) {
+          const c = document.getElementById("threeCanvasContainer");
+          if (c.clientWidth && c.clientHeight) {
+            camera.aspect = c.clientWidth / c.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(c.clientWidth, c.clientHeight);
+          }
+        } else if (target === "employeeTab") {
+          if (!empInitialized) {
+            initEmployee3D();
+            startNewEmployeeShift();
+            empInitialized = true;
+          } else if (empRenderer) {
+            const c = document.getElementById("empCanvasContainer");
+            if (c.clientWidth && c.clientHeight) {
+              empCamera.aspect = c.clientWidth / c.clientHeight;
+              empCamera.updateProjectionMatrix();
+              empRenderer.setSize(c.clientWidth, c.clientHeight);
+            }
+          }
+        } else if (target === "challengeTab") {
+          if (!chal3DInitialized) {
+            initChallenge3D();
+            chal3DInitialized = true;
+          } else if (chalRenderer) {
+            const c = document.getElementById("chalCanvasContainer");
+            if (c.clientWidth && c.clientHeight) {
+              chalCamera.aspect = c.clientWidth / c.clientHeight;
+              chalCamera.updateProjectionMatrix();
+              chalRenderer.setSize(c.clientWidth, c.clientHeight);
+            }
+          }
+        }
+      });
+    });
+
+    function createEmployeeAvatar() {
+      const worker = new THREE.Group();
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+      const legL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.5, 0.18), legMat);
+      legL.position.set(-0.12, 0.25, 0);
+      const legR = legL.clone();
+      legR.position.x = 0.12;
+      worker.add(legL, legR);
+
+      const torso = new THREE.Mesh(
+        new THREE.BoxGeometry(0.48, 0.58, 0.28),
+        new THREE.MeshStandardMaterial({ color: 0x0284c7 })
+      );
+      torso.position.y = 0.79;
+      torso.castShadow = true;
+      worker.add(torso);
+
+      const vest = new THREE.Mesh(
+        new THREE.BoxGeometry(0.50, 0.42, 0.30),
+        new THREE.MeshStandardMaterial({ color: 0xfacc15 })
+      );
+      vest.position.y = 0.80;
+      worker.add(vest);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0xfde68a })
+      );
+      head.position.y = 1.28;
+      worker.add(head);
+
+      const helmet = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b })
+      );
+      helmet.position.y = 1.30;
+      worker.add(helmet);
+
+      return worker;
+    }
+
+    function initEmployee3D() {
+      const container = document.getElementById("empCanvasContainer");
+      if (!window.THREE) return;
+
+      empScene = new THREE.Scene();
+      empScene.background = new THREE.Color(0xdbeafe);
+      empScene.fog = new THREE.Fog(0xdbeafe, 18, 42);
+
+      const w = container.clientWidth || 800;
+      const h = container.clientHeight || 460;
+      empCamera = new THREE.PerspectiveCamera(55, w / h, 0.1, 100);
+
+      empRenderer = new THREE.WebGLRenderer({ antialias: true });
+      empRenderer.setSize(w, h);
+      empRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      empRenderer.shadowMap.enabled = true;
+      container.appendChild(empRenderer.domElement);
+
+      empScene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+      dir.position.set(8, 14, 9);
+      dir.castShadow = true;
+      empScene.add(dir);
+
+      // Floor & Grid
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(15.2, 0.35, 9.2),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.75 })
+      );
+      base.position.y = -0.18;
+      base.receiveShadow = true;
+      empScene.add(base);
+      const grid = new THREE.GridHelper(15, 30, 0x94a3b8, 0xcbd5e1);
+      grid.position.y = 0.01;
+      empScene.add(grid);
+
+      // Stations (simplified copies + labels)
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
+      Object.entries(STATIONS).forEach(([idStr, st]) => {
+        const id = Number(idStr);
+        const g = new THREE.Group();
+        g.position.set(st.pos[0], 0, st.pos[2]);
+
+        const plat = new THREE.Mesh(
+          new THREE.BoxGeometry(3.2, 0.24, 2.3),
+          new THREE.MeshStandardMaterial({ color: 0x94a3b8 })
+        );
+        plat.position.y = 0.12;
+        plat.receiveShadow = true;
+        g.add(plat);
+
+        const bodyColor = [0x334155, 0x0ea5e9, 0xf97316, 0x0284c7, 0x10b981, 0xd97706][id - 1];
+        const machine = new THREE.Mesh(
+          new THREE.BoxGeometry(1.5, 1.3, 1.0),
+          new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.5 })
+        );
+        machine.position.y = 0.85;
+        machine.castShadow = true;
+        g.add(machine);
+
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.12), darkMat);
+        panel.position.set(0.8, 1.0, 0.55);
+        g.add(panel);
+
+        const label = createLabelSprite(`${id}. ${st.name}`, "#065f46");
+        label.position.set(0, 2.25, 0);
+        g.add(label);
+
+        empScene.add(g);
+      });
+
+      // Glowing Mission Beacon
+      empBeacon = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.32, 0),
+        new THREE.MeshBasicMaterial({ color: 0xf59e0b, wireframe: false })
+      );
+      empBeacon.position.set(0, 3.0, 0);
+      empScene.add(empBeacon);
+
+      // Employee Avatar
+      empAvatar = createEmployeeAvatar();
+      empAvatar.position.set(empPos.x, 0, empPos.z);
+      empScene.add(empAvatar);
+
+      window.addEventListener("resize", () => {
+        if (activeTab !== "employeeTab") return;
+        const nw = container.clientWidth;
+        const nh = container.clientHeight;
+        if (!nw || !nh) return;
+        empCamera.aspect = nw / nh;
+        empCamera.updateProjectionMatrix();
+        empRenderer.setSize(nw, nh);
+      });
+
+      const empClock = new THREE.Clock();
+      function animateEmp() {
+        requestAnimationFrame(animateEmp);
+        if (activeTab !== "employeeTab") return;
+
+        const dt = Math.min(empClock.getDelta(), 0.05);
+        const speed = 4.2;
+        let dx = 0, dz = 0;
+        if (empKeys.up) dz -= 1;
+        if (empKeys.down) dz += 1;
+        if (empKeys.left) dx -= 1;
+        if (empKeys.right) dx += 1;
+
+        if (dx !== 0 || dz !== 0) {
+          const len = Math.hypot(dx, dz);
+          dx /= len;
+          dz /= len;
+          empPos.x = Math.max(-6.8, Math.min(6.8, empPos.x + dx * speed * dt));
+          empPos.z = Math.max(-3.8, Math.min(3.8, empPos.z + dz * speed * dt));
+          empPos.rotY = Math.atan2(dx, dz);
+        }
+
+        empAvatar.position.set(empPos.x, 0, empPos.z);
+        empAvatar.rotation.y = empPos.rotY;
+        empAvatar.visible = !empFirstPerson;
+
+        // Beacon bobbing
+        const activeTask = empTasks[empCurrentTaskIdx];
+        if (activeTask && !activeTask.done) {
+          const stPos = STATIONS[activeTask.stationId].pos;
+          empBeacon.visible = true;
+          empBeacon.position.set(stPos[0], 2.9 + Math.sin(empClock.elapsedTime * 4) * 0.25, stPos[2]);
+          empBeacon.rotation.y += dt * 2.5;
+        } else {
+          empBeacon.visible = false;
+        }
+
+        // Camera follow
+        if (empFirstPerson) {
+          empCamera.position.set(empPos.x, 1.45, empPos.z);
+          const lookX = empPos.x + Math.sin(empPos.rotY) * 3;
+          const lookZ = empPos.z + Math.cos(empPos.rotY) * 3;
+          empCamera.lookAt(lookX, 1.35, lookZ);
+        } else {
+          empCamera.position.set(empPos.x * 0.65, 6.2, empPos.z + 6.5);
+          empCamera.lookAt(empPos.x, 0.9, empPos.z);
+        }
+
+        // Proximity check
+        let nearest = null;
+        let minDist = 2.65;
+        Object.entries(STATIONS).forEach(([idStr, st]) => {
+          const d = Math.hypot(empPos.x - st.pos[0], empPos.z - st.pos[2]);
+          if (d < minDist) { minDist = d; nearest = Number(idStr); }
+        });
+
+        empNearStationId = nearest;
+        const promptBtn = document.getElementById("empActionPrompt");
+        const nearLabel = document.getElementById("empNearStation");
+        if (nearest) {
+          nearLabel.textContent = `${nearest}. ${STATIONS[nearest].name}`;
+          const isTarget = activeTask && !activeTask.done && activeTask.stationId === nearest;
+          promptBtn.style.display = "block";
+          promptBtn.textContent = isTarget
+            ? `🔧 [E] 立即處理第 ${nearest} 站工單！`
+            : `🔍 [E] 檢查第 ${nearest} 站設備`;
+        } else {
+          nearLabel.textContent = "走道巡檢中";
+          promptBtn.style.display = "none";
+        }
+
+        empRenderer.render(empScene, empCamera);
+      }
+      animateEmp();
+    }
+
+    function startNewEmployeeShift() {
+      const shuffled = [...EMP_TASK_TEMPLATES].sort(() => Math.random() - 0.5).slice(0, 4);
+      empTasks = shuffled.map(t => ({ ...t, done: false }));
+      empCurrentTaskIdx = 0;
+      renderEmployeeTasks();
+    }
+
+    function renderEmployeeTasks() {
+      const doneCount = empTasks.filter(t => t.done).length;
+      document.getElementById("empDone").textContent = `${doneCount} / ${empTasks.length}`;
+      document.getElementById("empXP").textContent = `${empXP} XP`;
+
+      const activeBox = document.getElementById("empActiveTaskBox");
+      const active = empTasks[empCurrentTaskIdx];
+      if (!active || active.done) {
+        activeBox.className = "emp-task-card done";
+        activeBox.innerHTML = `<strong>🎉 本班次所有 IoT 工單已完成！</strong><p style="font-size:12px;margin-top:4px;">可點擊上方「重新指派值班工單」繼續挑戰。</p>`;
+      } else {
+        activeBox.className = "emp-task-card";
+        activeBox.innerHTML = `
+          <div style="font-weight:900; color:#92400e; font-size:14px;">📍 前往第 ${active.stationId} 站：${STATIONS[active.stationId].name}</div>
+          <div style="font-weight:800; font-size:13px; margin:4px 0;">${active.title}</div>
+          <div style="font-size:12px; color:#78350f;">${active.alert}</div>
+        `;
+      }
+
+      const list = document.getElementById("empTaskList");
+      list.innerHTML = empTasks.map((t, i) => `
+        <div class="log-item ${t.done ? "ok" : i === empCurrentTaskIdx ? "warn" : ""}">
+          ${t.done ? "✅" : i === empCurrentTaskIdx ? "🚨" : "⏳"} [${t.stationId} ${STATIONS[t.stationId].name}] ${t.title} (+${t.xp} XP)
+        </div>
+      `).join("");
+    }
+
+    function openEmployeeStationTask(stationId) {
+      const active = empTasks[empCurrentTaskIdx];
+      if (!active || active.done || active.stationId !== stationId) {
+        modalTitle.textContent = `🔧 第 ${stationId} 站巡檢：${STATIONS[stationId].name}`;
+        modalBody.innerHTML = `
+          <p style="font-size:14px; margin-bottom:10px;">目前此站設備運作正常！${active && !active.done ? `請前往發光信標所在的 <strong>第 ${active.stationId} 站（${STATIONS[active.stationId].name}）</strong> 處理警報。` : ""}</p>
+          <div style="background:var(--cyan-soft); color:#0369a1; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:700;">
+            感測器資訊：${STATIONS[stationId].sensor}
+          </div>
+        `;
+        modalBackdrop.classList.add("open");
+        return;
+      }
+
+      const completeTask = () => {
+        active.done = true;
+        empXP += active.xp;
+        if (empCurrentTaskIdx < empTasks.length - 1) empCurrentTaskIdx++;
+        renderEmployeeTasks();
+        closeModal();
+      };
+
+      modalTitle.textContent = `🛠️ 現場任務：${active.title}`;
+      if (stationId === 1) {
+        modalBody.innerHTML = `
+          <p style="font-size:14px;margin-bottom:12px;">請點擊「<strong>黃色積木</strong>」補入原料架：</p>
+          <div style="display:flex; gap:10px; justify-content:center;">
+            <button class="btn" style="background:#ef4444;color:#fff;" onclick="alert('這不是缺貨的顏色喔！')">紅色積木</button>
+            <button class="btn" style="background:#eab308;color:#0f172a;" id="empMiniAction">🟨 補充黃色積木</button>
+            <button class="btn" style="background:#3b82f6;color:#fff;" onclick="alert('藍色積木庫存還很充足！')">藍色積木</button>
+          </div>`;
+        document.getElementById("empMiniAction").onclick = completeTask;
+      } else if (stationId === 3) {
+        let temp = 58;
+        modalBody.innerHTML = `
+          <p style="font-size:14px;margin-bottom:10px;">連續點擊降溫按鈕，將主軸溫度降至 <strong>35°C</strong> 以下：</p>
+          <div style="font-size:28px;font-weight:900;text-align:center;color:var(--red);margin:10px 0;" id="empTempVal">${temp}°C</div>
+          <button class="btn btn-primary" style="width:100%;" id="empCoolBtn">❄️ 啟動冷卻風扇 (-8°C)</button>`;
+        document.getElementById("empCoolBtn").onclick = () => {
+          temp -= 8;
+          const el = document.getElementById("empTempVal");
+          el.textContent = `${temp}°C`;
+          if (temp <= 35) {
+            el.style.color = "var(--emerald)";
+            setTimeout(completeTask, 300);
+          }
+        };
+      } else if (stationId === 5) {
+        modalBody.innerHTML = `
+          <p style="font-size:14px;margin-bottom:10px;">AI 拍到這台車頂積木歪斜（信心度 62%），請幫 AI 標註正確分類：</p>
+          <div style="background:#fef2f2;border:2px dashed #ef4444;border-radius:12px;padding:14px;text-align:center;margin-bottom:12px;">
+            <div style="font-size:32px;">🚗⚠️</div>
+            <div style="font-size:12px;color:#b91c1c;font-weight:700;">車頂積木明顯歪斜脫落</div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="alert('仔細看喔，車頂積木歪掉了！')">✅ 標註 OK</button>
+            <button class="btn btn-danger active" style="flex:1;" id="empMiniAction">❌ 標註 NG 瑕疵</button>
+          </div>`;
+        document.getElementById("empMiniAction").onclick = completeTask;
+      } else {
+        modalBody.innerHTML = `
+          <p style="font-size:14px;margin-bottom:12px;">${active.alert}</p>
+          <button class="btn btn-primary" style="width:100%;" id="empMiniAction">✅ 完成現場處置並回報 IoT 系統</button>`;
+        document.getElementById("empMiniAction").onclick = completeTask;
+      }
+      modalBackdrop.classList.add("open");
+    }
+
+    // Keyboard & D-Pad Controls
+    window.addEventListener("keydown", (e) => {
+      if (activeTab !== "employeeTab") return;
+      const k = e.key.toLowerCase();
+      if (k === "w" || e.key === "ArrowUp") empKeys.up = true;
+      if (k === "s" || e.key === "ArrowDown") empKeys.down = true;
+      if (k === "a" || e.key === "ArrowLeft") empKeys.left = true;
+      if (k === "d" || e.key === "ArrowRight") empKeys.right = true;
+      if (k === "e" && empNearStationId && !modalBackdrop.classList.contains("open")) {
+        openEmployeeStationTask(empNearStationId);
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "w" || e.key === "ArrowUp") empKeys.up = false;
+      if (k === "s" || e.key === "ArrowDown") empKeys.down = false;
+      if (k === "a" || e.key === "ArrowLeft") empKeys.left = false;
+      if (k === "d" || e.key === "ArrowRight") empKeys.right = false;
+    });
+
+    document.querySelectorAll(".dpad-btn").forEach(btn => {
+      const dir = btn.dataset.dir;
+      const setDir = (val) => { empKeys[dir] = val; };
+      btn.addEventListener("pointerdown", () => setDir(true));
+      btn.addEventListener("pointerup", () => setDir(false));
+      btn.addEventListener("pointerleave", () => setDir(false));
+    });
+
+    document.getElementById("empActionPrompt").onclick = () => {
+      if (empNearStationId) openEmployeeStationTask(empNearStationId);
+    };
+
+    document.getElementById("btnEmpCamToggle").onclick = (e) => {
+      empFirstPerson = !empFirstPerson;
+      e.target.textContent = empFirstPerson ? "🎥 切換第三人稱跟隨" : "👁️ 切換第一人稱視角";
+    };
+
+    document.getElementById("btnNewShift").onclick = startNewEmployeeShift;
+
+    // ================= 10-LEVEL TIMED REPAIR CHALLENGE =================
+    const CHALLENGE_LEVELS = [
+      { level: 1, name: "第 1 關・入門", target: 3, spawnMs: 4200, maxConcurrent: 2, types: ["switch", "quiz"], difficulty: 1 },
+      { level: 2, name: "第 2 關・初級", target: 4, spawnMs: 3800, maxConcurrent: 2, types: ["switch", "screw", "quiz"], difficulty: 1 },
+      { level: 3, name: "第 3 關・基礎", target: 5, spawnMs: 3500, maxConcurrent: 3, types: ["wire", "quiz", "switch"], difficulty: 1 },
+      { level: 4, name: "第 4 關・進階", target: 6, spawnMs: 3200, maxConcurrent: 3, types: ["switch", "wire", "screw"], difficulty: 2 },
+      { level: 5, name: "第 5 關・中級", target: 7, spawnMs: 2900, maxConcurrent: 4, types: ["quiz", "wire", "screw", "switch"], difficulty: 2 },
+      { level: 6, name: "第 6 關・熟練", target: 8, spawnMs: 2600, maxConcurrent: 4, types: ["switch", "wire", "screw", "quiz"], difficulty: 2 },
+      { level: 7, name: "第 7 關・挑戰", target: 9, spawnMs: 2300, maxConcurrent: 5, types: ["wire", "screw", "switch", "quiz"], difficulty: 3 },
+      { level: 8, name: "第 8 關・困難", target: 10, spawnMs: 2000, maxConcurrent: 5, types: ["switch", "wire", "screw", "quiz"], difficulty: 3 },
+      { level: 9, name: "第 9 關・專家", target: 11, spawnMs: 1800, maxConcurrent: 6, types: ["wire", "switch", "quiz", "screw"], difficulty: 3 },
+      { level: 10, name: "第 10 關・大師", target: 12, spawnMs: 1500, maxConcurrent: 6, types: ["switch", "wire", "screw", "quiz"], difficulty: 4 }
+    ];
+
+    const FAULT_META = {
+      switch: { icon: "🎛️", label: "斷路器開關" },
+      wire: { icon: "🔌", label: "感測器接線" },
+      screw: { icon: "🔧", label: "鎖螺絲板手" },
+      quiz: { icon: "🧠", label: "AIoT 故障診斷" }
+    };
+
+    const DIAGNOSTIC_QUESTIONS = [
+      {
+        q: "第 5 站 AI 視覺相機突然畫面全黑，但網路連線正常，最應先檢查什麼？",
+        opts: ["攝影機電源線與鏡頭蓋", "把輸送帶拆掉", "重新粉刷工廠牆壁"],
+        ans: 0
+      },
+      {
+        q: "溫度感測器回傳數值突然變成 -999°C，這通常代表什麼問題？",
+        opts: ["工廠進入冰河時期", "感測器訊號線鬆脫或斷路", "冷氣開太強"],
+        ans: 1
+      },
+      {
+        q: "機械手臂在組裝時一直撞到旁邊，應該先執行哪一項動作？",
+        opts: ["按下緊急停止並重新進行原點校正", "把速度調到 10 倍", "把積木拿走"],
+        ans: 0
+      },
+      {
+        q: "MQTT 儀表板顯示資料延遲高達 5 秒，最可能的原因是？",
+        opts: ["工廠 Wi-Fi 訊號干擾或頻寬塞車", "積木顏色太亮", "天車油漆沒乾"],
+        ans: 0
+      },
+      {
+        q: "AI 品檢把合格品誤判為 NG 瑕疵品，該如何根本改善？",
+        opts: ["補充更多光線穩定的合格品照片重新訓練模型", "把 AI 相機拔掉", "關掉工廠所有電燈"],
+        ans: 0
+      }
+    ];
+
+    let chalCurrentLevel = 1;
+    let chalUnlockedMax = 1;
+    let chalCleared = new Set();
+    let chalRunning = false;
+    let chalTimeLeft = 60.0;
+    let chalHP = 3;
+    let chalFixedCount = 0;
+    let chalTimerHandle = null;
+    let chalSpawnHandle = null;
+    let chalFaults = {}; // stationId -> { type, fixed, difficulty }
+    let chalSelectedStation = null;
+
+    let chal3DInitialized = false;
+    let chalScene, chalCamera, chalRenderer, chalControls;
+    let chalStationGroups = {}, chalBeaconMats = {}, chalAlertMeshes = {}, chalSmokeGroups = {};
+
+    function initChallenge3D() {
+      const container = document.getElementById("chalCanvasContainer");
+      if (!window.THREE) return;
+
+      chalScene = new THREE.Scene();
+      chalScene.background = new THREE.Color(0x0f172a);
+      chalScene.fog = new THREE.Fog(0x0f172a, 18, 42);
+
+      const w = container.clientWidth || 700;
+      const h = container.clientHeight || 330;
+      chalCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+      chalCamera.position.set(0, 9.5, 11.5);
+
+      chalRenderer = new THREE.WebGLRenderer({ antialias: true });
+      chalRenderer.setSize(w, h);
+      chalRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      chalRenderer.shadowMap.enabled = true;
+      container.appendChild(chalRenderer.domElement);
+
+      chalControls = new THREE.OrbitControls(chalCamera, chalRenderer.domElement);
+      chalControls.enableDamping = true;
+      chalControls.dampingFactor = 0.08;
+      chalControls.maxPolarAngle = Math.PI / 2.15;
+      chalControls.minDistance = 6;
+      chalControls.maxDistance = 20;
+      chalControls.target.set(0, 0.7, 0);
+
+      chalScene.add(new THREE.AmbientLight(0xffffff, 0.55));
+      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+      dir.position.set(7, 14, 9);
+      dir.castShadow = true;
+      chalScene.add(dir);
+
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(15.2, 0.35, 9.2),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 })
+      );
+      base.position.y = -0.18;
+      base.receiveShadow = true;
+      chalScene.add(base);
+      const grid = new THREE.GridHelper(15, 30, 0x334155, 0x1e293b);
+      grid.position.y = 0.01;
+      chalScene.add(grid);
+
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
+      Object.entries(STATIONS).forEach(([idStr, st]) => {
+        const id = Number(idStr);
+        const g = new THREE.Group();
+        g.position.set(st.pos[0], 0, st.pos[2]);
+        g.userData.stationId = id;
+
+        const plat = new THREE.Mesh(
+          new THREE.BoxGeometry(3.3, 0.24, 2.4),
+          new THREE.MeshStandardMaterial({ color: 0x475569 })
+        );
+        plat.position.y = 0.12;
+        plat.userData.stationId = id;
+        g.add(plat);
+
+        const bodyColor = [0x334155, 0x0ea5e9, 0xf97316, 0x0284c7, 0x10b981, 0xd97706][id - 1];
+        const machine = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 1.35, 1.05),
+          new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.45 })
+        );
+        machine.position.y = 0.9;
+        machine.castShadow = true;
+        machine.userData.stationId = id;
+        g.add(machine);
+
+        const beaconMat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x064e3b });
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), beaconMat);
+        beacon.position.set(0, 1.72, 0);
+        g.add(beacon);
+        chalBeaconMats[id] = beaconMat;
+
+        // Floating 3D Alert Diamond (visible when broken)
+        const alertMesh = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.36, 0),
+          new THREE.MeshBasicMaterial({ color: 0xef4444 })
+        );
+        alertMesh.position.set(0, 2.45, 0);
+        alertMesh.visible = false;
+        g.add(alertMesh);
+        chalAlertMeshes[id] = alertMesh;
+
+        // Smoke spheres (visible when broken)
+        const smokeGroup = new THREE.Group();
+        for (let s = 0; s < 3; s++) {
+          const puff = new THREE.Mesh(
+            new THREE.SphereGeometry(0.22 - s * 0.04, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.55 })
+          );
+          puff.position.set((s - 1) * 0.2, 1.8 + s * 0.4, 0);
+          smokeGroup.add(puff);
+        }
+        smokeGroup.visible = false;
+        g.add(smokeGroup);
+        chalSmokeGroups[id] = smokeGroup;
+
+        const label = createLabelSprite(`${id}. ${st.name}`, "#0f172a");
+        label.position.set(0, 3.0, 0);
+        g.add(label);
+
+        chalScene.add(g);
+        chalStationGroups[id] = g;
+      });
+
+      // Raycasting on 3D Challenge Stations
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const hoverTag = document.getElementById("chalHoverTag");
+      let downPos = { x: 0, y: 0 };
+
+      chalRenderer.domElement.addEventListener("pointerdown", (e) => {
+        downPos = { x: e.clientX, y: e.clientY };
+      });
+
+      chalRenderer.domElement.addEventListener("pointermove", (e) => {
+        const rect = chalRenderer.domElement.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, chalCamera);
+        const hits = raycaster.intersectObjects(Object.values(chalStationGroups), true);
+        let foundId = null;
+        for (const h of hits) {
+          let obj = h.object;
+          while (obj && !obj.userData.stationId) obj = obj.parent;
+          if (obj && obj.userData.stationId) { foundId = obj.userData.stationId; break; }
+        }
+        if (foundId) {
+          const f = chalFaults[foundId];
+          const isBroken = f && !f.fixed;
+          hoverTag.style.display = "block";
+          hoverTag.style.background = isBroken ? "rgba(239, 68, 68, 0.92)" : "rgba(16, 185, 129, 0.92)";
+          hoverTag.textContent = isBroken
+            ? `🚨 點擊搶修：${foundId}. ${STATIONS[foundId].name}（${FAULT_META[f.type].label}）`
+            : `✅ ${foundId}. ${STATIONS[foundId].name}（運作正常）`;
+          chalRenderer.domElement.style.cursor = isBroken ? "pointer" : "grab";
+        } else {
+          hoverTag.style.display = "none";
+          chalRenderer.domElement.style.cursor = "grab";
+        }
+      });
+
+      chalRenderer.domElement.addEventListener("pointerup", (e) => {
+        if (!chalRunning) return;
+        const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+        if (dist > 6) return;
+        const rect = chalRenderer.domElement.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, chalCamera);
+        const hits = raycaster.intersectObjects(Object.values(chalStationGroups), true);
+        for (const h of hits) {
+          let obj = h.object;
+          while (obj && !obj.userData.stationId) obj = obj.parent;
+          if (obj && obj.userData.stationId) {
+            const id = obj.userData.stationId;
+            if (chalFaults[id] && !chalFaults[id].fixed) {
+              chalSelectedStation = id;
+              renderFaultMachines();
+              openRepairWorkbench(id);
+            }
+            break;
+          }
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (activeTab !== "challengeTab") return;
+        const nw = container.clientWidth;
+        const nh = container.clientHeight;
+        if (!nw || !nh) return;
+        chalCamera.aspect = nw / nh;
+        chalCamera.updateProjectionMatrix();
+        chalRenderer.setSize(nw, nh);
+      });
+
+      const chalClock = new THREE.Clock();
+      function animateChal() {
+        requestAnimationFrame(animateChal);
+        if (activeTab !== "challengeTab") return;
+        const t = chalClock.getElapsedTime();
+
+        for (let id = 1; id <= 6; id++) {
+          const f = chalFaults[id];
+          const isBroken = f && !f.fixed;
+          if (chalAlertMeshes[id]) {
+            chalAlertMeshes[id].visible = Boolean(isBroken);
+            if (isBroken) {
+              chalAlertMeshes[id].rotation.y = t * 4;
+              chalAlertMeshes[id].position.y = 2.4 + Math.sin(t * 7) * 0.2;
+            }
+          }
+          if (chalSmokeGroups[id]) {
+            chalSmokeGroups[id].visible = Boolean(isBroken);
+            if (isBroken) {
+              chalSmokeGroups[id].children.forEach((p, idx) => {
+                p.position.y = 1.7 + ((t * 1.4 + idx * 0.4) % 1.2);
+              });
+            }
+          }
+          if (chalBeaconMats[id]) {
+            if (isBroken) {
+              const flash = Math.sin(t * 10) > 0;
+              chalBeaconMats[id].color.setHex(flash ? 0xef4444 : 0x7f1d1d);
+              chalBeaconMats[id].emissive.setHex(flash ? 0xdc2626 : 0x450a0a);
+            } else {
+              chalBeaconMats[id].color.setHex(0x10b981);
+              chalBeaconMats[id].emissive.setHex(0x064e3b);
+            }
+          }
+        }
+
+        chalControls.update();
+        chalRenderer.render(chalScene, chalCamera);
+      }
+      animateChal();
+    }
+
+    function renderHP() {
+      const hearts = "❤️".repeat(Math.max(0, chalHP)) + "🖤".repeat(Math.max(0, 3 - chalHP));
+      document.getElementById("chalHPText").textContent = hearts;
+    }
+
+    function damageHP(reason) {
+      if (!chalRunning) return;
+      chalHP = Math.max(0, chalHP - 1);
+      renderHP();
+      const flash = document.getElementById("chalDamageFlash");
+      if (flash) {
+        flash.style.boxShadow = "inset 0 0 60px rgba(239, 68, 68, 0.75)";
+        setTimeout(() => { flash.style.boxShadow = "none"; }, 260);
+      }
+      if (chalHP <= 0) {
+        endChallenge(false, "hp", reason);
+      }
+    }
+
+    function renderLevelStrip() {
+      const strip = document.getElementById("levelStrip");
+      strip.innerHTML = "";
+      CHALLENGE_LEVELS.forEach(cfg => {
+        const btn = document.createElement("button");
+        const isLocked = cfg.level > chalUnlockedMax;
+        const isCleared = chalCleared.has(cfg.level);
+        btn.className = `level-btn ${cfg.level === chalCurrentLevel ? "current" : ""} ${isCleared ? "cleared" : ""} ${isLocked ? "locked" : ""}`;
+        btn.innerHTML = `<span>第${cfg.level}關</span><span style="font-size:10px;">${isCleared ? "✅" : isLocked ? "🔒" : `目標${cfg.target}`}</span>`;
+        btn.disabled = isLocked || chalRunning;
+        btn.onclick = () => {
+          if (chalRunning) return;
+          chalCurrentLevel = cfg.level;
+          updateChallengeHeader();
+          renderLevelStrip();
+        };
+        strip.appendChild(btn);
+      });
+    }
+
+    function updateChallengeHeader() {
+      const cfg = CHALLENGE_LEVELS[chalCurrentLevel - 1];
+      document.getElementById("chalLevelTitle").textContent = `${cfg.name}（限時 60 秒・3 血量）`;
+      document.getElementById("chalRemainingText").textContent = `已修復：${chalFixedCount} 次（過關目標：${cfg.target} 次）`;
+    }
+
+    function renderFaultMachines() {
+      const grid = document.getElementById("faultMachinesGrid");
+      grid.innerHTML = "";
+      for (let id = 1; id <= 6; id++) {
+        const f = chalFaults[id];
+        const isBroken = f && !f.fixed;
+        const card = document.createElement("div");
+        card.className = `fault-machine-card ${isBroken ? "broken" : ""} ${chalSelectedStation === id ? "selected" : ""}`;
+        card.style.padding = "8px 4px";
+        if (isBroken) {
+          const meta = FAULT_META[f.type];
+          card.innerHTML = `
+            <div style="font-size:16px;">${meta.icon}</div>
+            <div style="font-weight:900; font-size:11px; color:var(--navy);">${id}.${STATIONS[id].name}</div>
+            <div style="font-size:10px; font-weight:800; color:var(--red);">🚨故障</div>
+          `;
+          card.onclick = () => {
+            if (!chalRunning) return;
+            chalSelectedStation = id;
+            renderFaultMachines();
+            openRepairWorkbench(id);
+          };
+        } else {
+          card.innerHTML = `
+            <div style="font-size:16px;">✅</div>
+            <div style="font-weight:900; font-size:11px; color:var(--navy);">${id}.${STATIONS[id].name}</div>
+            <div style="font-size:10px; font-weight:700; color:var(--emerald);">正常</div>
+          `;
+        }
+        grid.appendChild(card);
+      }
+    }
+
+    function spawnRandomFault() {
+      if (!chalRunning) return;
+      const cfg = CHALLENGE_LEVELS[chalCurrentLevel - 1];
+      const brokenIds = Object.keys(chalFaults).filter(id => chalFaults[id] && !chalFaults[id].fixed);
+      if (brokenIds.length >= cfg.maxConcurrent) return;
+
+      const healthyIds = [1, 2, 3, 4, 5, 6].filter(id => !chalFaults[id] || chalFaults[id].fixed);
+      if (healthyIds.length === 0) return;
+
+      const pickId = healthyIds[Math.floor(Math.random() * healthyIds.length)];
+      const type = cfg.types[Math.floor(Math.random() * cfg.types.length)];
+      chalFaults[pickId] = { type, fixed: false, difficulty: cfg.difficulty };
+      renderFaultMachines();
+
+      if (!chalSelectedStation || !chalFaults[chalSelectedStation] || chalFaults[chalSelectedStation].fixed) {
+        chalSelectedStation = pickId;
+        renderFaultMachines();
+        openRepairWorkbench(pickId);
+      }
+    }
+
+    function startChallengeLevel() {
+      if (chalRunning) return;
+      const cfg = CHALLENGE_LEVELS[chalCurrentLevel - 1];
+      chalFaults = {};
+      chalRunning = true;
+      chalTimeLeft = 60.0;
+      chalHP = 3;
+      chalFixedCount = 0;
+      chalSelectedStation = null;
+
+      renderHP();
+      document.getElementById("btnStartChallenge").disabled = true;
+      renderLevelStrip();
+      updateChallengeHeader();
+
+      // Spawn initial faults immediately
+      spawnRandomFault();
+      if (cfg.level >= 4) spawnRandomFault();
+
+      if (chalSpawnHandle) clearInterval(chalSpawnHandle);
+      chalSpawnHandle = setInterval(spawnRandomFault, cfg.spawnMs);
+
+      if (chalTimerHandle) clearInterval(chalTimerHandle);
+      chalTimerHandle = setInterval(() => {
+        chalTimeLeft = Math.max(0, chalTimeLeft - 0.1);
+        const timerEl = document.getElementById("chalTimerText");
+        const barEl = document.getElementById("chalCountdownBar");
+        timerEl.textContent = `${chalTimeLeft.toFixed(1)}s`;
+        barEl.style.width = `${(chalTimeLeft / 60) * 100}%`;
+        barEl.className = `countdown-bar ${chalTimeLeft < 10 ? "danger" : chalTimeLeft < 20 ? "warn" : ""}`;
+
+        if (chalTimeLeft <= 0) {
+          const passed = chalHP > 0 && chalFixedCount >= cfg.target;
+          endChallenge(passed, passed ? "win" : "target");
+        }
+      }, 100);
+    }
+
+    function markFaultFixed(stationId) {
+      if (!chalRunning || !chalFaults[stationId] || chalFaults[stationId].fixed) return;
+      chalFaults[stationId].fixed = true;
+      chalFixedCount++;
+      updateChallengeHeader();
+      renderFaultMachines();
+
+      const nextBroken = Object.keys(chalFaults).find(id => chalFaults[id] && !chalFaults[id].fixed);
+      if (nextBroken) {
+        chalSelectedStation = Number(nextBroken);
+        renderFaultMachines();
+        openRepairWorkbench(chalSelectedStation);
+      } else {
+        // All currently visible faults cleared -> spawn next immediately so it keeps coming!
+        spawnRandomFault();
+      }
+    }
+
+    function endChallenge(won, reason = "", detail = "") {
+      clearInterval(chalTimerHandle);
+      clearInterval(chalSpawnHandle);
+      chalRunning = false;
+      document.getElementById("btnStartChallenge").disabled = false;
+      const cfg = CHALLENGE_LEVELS[chalCurrentLevel - 1];
+
+      if (won) {
+        chalCleared.add(chalCurrentLevel);
+        if (chalCurrentLevel === chalUnlockedMax && chalUnlockedMax < 10) {
+          chalUnlockedMax++;
+        }
+        renderLevelStrip();
+        document.getElementById("repairWorkbench").innerHTML = `
+          <div style="text-align:center; padding:40px 16px;">
+            <div style="font-size:48px;">🏆</div>
+            <h3 style="color:var(--emerald); font-size:20px; margin:8px 0;">第 ${chalCurrentLevel} 關挑戰成功！</h3>
+            <p style="font-size:14px; color:var(--text); margin-bottom:16px;">你在 60 秒內共修復了 <strong>${chalFixedCount} 次</strong> 故障（目標 ${cfg.target} 次），剩餘血量 ${"❤️".repeat(chalHP)}！</p>
+            ${chalCurrentLevel < 10
+              ? `<button class="btn btn-primary" onclick="goNextChallengeLevel()">➡ 挑戰第 ${chalCurrentLevel + 1} 關</button>`
+              : `<div style="font-weight:900; color:var(--amber);">🎉 恭喜通關全部 10 關！你是傳奇 AIoT 搶修大師！</div>`}
+          </div>
+        `;
+      } else {
+        renderLevelStrip();
+        const failTitle = reason === "hp" ? "💔 血量歸零！搶修失敗" : "⏰ 時間到！未達過關修復次數";
+        const failDesc = reason === "hp"
+          ? `3 顆愛心已全部耗盡（${detail || "操作失誤"}），本關結束！`
+          : `60 秒結束時修復了 ${chalFixedCount} 次，尚未達到本關目標 ${cfg.target} 次，再加快手速試試！`;
+        document.getElementById("repairWorkbench").innerHTML = `
+          <div style="text-align:center; padding:40px 16px;">
+            <div style="font-size:48px;">${reason === "hp" ? "💔" : "⏰"}</div>
+            <h3 style="color:var(--red); font-size:20px; margin:8px 0;">${failTitle}</h3>
+            <p style="font-size:14px; color:var(--muted); margin-bottom:16px;">${failDesc}</p>
+            <button class="btn btn-primary" onclick="startChallengeLevel()">🔄 重新挑戰本關</button>
+          </div>
+        `;
+      }
+    }
+
+    function goNextChallengeLevel() {
+      if (chalCurrentLevel < 10) {
+        chalCurrentLevel++;
+        updateChallengeHeader();
+        renderLevelStrip();
+        startChallengeLevel();
+      }
+    }
+
+    function openRepairWorkbench(stationId) {
+      const f = chalFaults[stationId];
+      const wb = document.getElementById("repairWorkbench");
+      if (!f || f.fixed) return;
+
+      if (f.type === "switch") renderSwitchRepair(wb, stationId, f.difficulty);
+      else if (f.type === "wire") renderWiringRepair(wb, stationId, f.difficulty);
+      else if (f.type === "screw") renderScrewRepair(wb, stationId, f.difficulty);
+      else if (f.type === "quiz") renderQuizRepair(wb, stationId);
+    }
+
+    // 1. Switch / Breaker Sequence
+    function renderSwitchRepair(wb, stationId, diff) {
+      const count = diff >= 3 ? 5 : diff === 2 ? 4 : 3;
+      const names = ["主電源", "安全門", "氣壓閥", "伺服軸", "急停鎖"].slice(0, count);
+      const order = Array.from({ length: count }, (_, i) => i).sort(() => Math.random() - 0.5);
+      let step = 0;
+
+      wb.innerHTML = `
+        <div>
+          <div class="panel-title"><span>🎛️ [${stationId}. ${STATIONS[stationId].name}] 斷路器復位</span></div>
+          <p style="font-size:13px; color:var(--muted);">請嚴格依照安全順序開啟開關：</p>
+          <div style="background:var(--amber-soft); padding:8px 12px; border-radius:10px; font-weight:800; font-size:13px; margin:8px 0; color:#92400e;">
+            順序：${order.map(i => names[i]).join(" → ")}
+          </div>
+          <div class="switch-board" id="switchBoard"></div>
+        </div>
+        <div id="switchMsg" style="font-size:13px; font-weight:700; text-align:center; color:var(--muted);">下一個應開啟：${names[order[0]]}</div>
+      `;
+
+      const board = document.getElementById("switchBoard");
+      names.forEach((name, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "breaker-btn";
+        btn.innerHTML = `<span style="font-size:20px;">⏻</span><span>${name}</span>`;
+        btn.onclick = () => {
+          if (btn.classList.contains("on")) return;
+          if (idx === order[step]) {
+            btn.classList.add("on");
+            step++;
+            if (step === count) {
+              markFaultFixed(stationId);
+            } else {
+              document.getElementById("switchMsg").textContent = `下一個應開啟：${names[order[step]]}`;
+            }
+          } else {
+            document.getElementById("switchMsg").innerHTML = `<span style="color:var(--red);">❌ 順序錯誤！扣 1 顆 ❤️ 並重置開關</span>`;
+            step = 0;
+            board.querySelectorAll(".breaker-btn").forEach(b => b.classList.remove("on"));
+            damageHP("開關順序錯誤");
+          }
+        };
+        board.appendChild(btn);
+      });
+    }
+
+    // 2. Wiring Repair
+    function renderWiringRepair(wb, stationId, diff) {
+      const palette = [
+        { id: "vcc", label: "紅 VCC", color: "#ef4444" },
+        { id: "gnd", label: "藍 GND", color: "#3b82f6" },
+        { id: "dat", label: "黃 DATA", color: "#eab308" },
+        { id: "clk", label: "綠 CLK", color: "#10b981" }
+      ];
+      const wires = palette.slice(0, diff >= 3 ? 4 : 3);
+      const rightOrder = [...wires].sort(() => Math.random() - 0.5);
+      let selectedLeft = null;
+      const connected = new Set();
+
+      wb.innerHTML = `
+        <div>
+          <div class="panel-title"><span>🔌 [${stationId}. ${STATIONS[stationId].name}] 感測器接線修復</span></div>
+          <p style="font-size:13px; color:var(--muted);">先點擊左側線頭，再點擊右側對應顏色的端子完成接線：</p>
+          <div class="wire-arena" id="wireArena">
+            <svg class="wire-svg" id="wireSvg"></svg>
+            <div class="wire-col" id="wireLeft"></div>
+            <div class="wire-col" id="wireRight"></div>
+          </div>
+        </div>
+        <div id="wireMsg" style="font-size:13px; font-weight:700; text-align:center; color:var(--muted);">已接好 0 / ${wires.length} 條線</div>
+      `;
+
+      const leftCol = document.getElementById("wireLeft");
+      const rightCol = document.getElementById("wireRight");
+      const svg = document.getElementById("wireSvg");
+      const arena = document.getElementById("wireArena");
+
+      wires.forEach(w => {
+        const btn = document.createElement("button");
+        btn.className = "wire-node";
+        btn.dataset.id = w.id;
+        btn.style.borderLeft = `6px solid ${w.color}`;
+        btn.textContent = w.label;
+        btn.onclick = () => {
+          if (connected.has(w.id)) return;
+          leftCol.querySelectorAll(".wire-node").forEach(n => n.classList.remove("active"));
+          btn.classList.add("active");
+          selectedLeft = { item: w, el: btn };
+        };
+        leftCol.appendChild(btn);
+      });
+
+      rightOrder.forEach(w => {
+        const btn = document.createElement("button");
+        btn.className = "wire-node";
+        btn.dataset.id = w.id;
+        btn.style.borderRight = `6px solid ${w.color}`;
+        btn.textContent = w.label;
+        btn.onclick = () => {
+          if (!selectedLeft || connected.has(w.id)) return;
+          if (selectedLeft.item.id === w.id) {
+            connected.add(w.id);
+            selectedLeft.el.classList.remove("active");
+            selectedLeft.el.classList.add("connected");
+            btn.classList.add("connected");
+
+            const aRect = arena.getBoundingClientRect();
+            const lRect = selectedLeft.el.getBoundingClientRect();
+            const rRect = btn.getBoundingClientRect();
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", lRect.right - aRect.left);
+            line.setAttribute("y1", lRect.top - aRect.top + lRect.height / 2);
+            line.setAttribute("x2", rRect.left - aRect.left);
+            line.setAttribute("y2", rRect.top - aRect.top + rRect.height / 2);
+            line.setAttribute("stroke", w.color);
+            line.setAttribute("stroke-width", "5");
+            line.setAttribute("stroke-linecap", "round");
+            svg.appendChild(line);
+
+            selectedLeft = null;
+            document.getElementById("wireMsg").textContent = `已接好 ${connected.size} / ${wires.length} 條線`;
+            if (connected.size === wires.length) setTimeout(() => markFaultFixed(stationId), 200);
+          } else {
+            document.getElementById("wireMsg").innerHTML = `<span style="color:var(--red);">⚠️ 顏色接錯短路！扣 1 顆 ❤️</span>`;
+            damageHP("接線顏色錯誤");
+          }
+        };
+        rightCol.appendChild(btn);
+      });
+    }
+
+    // 3. Torque Wrench / Screw Tightening (Safe Zone 80%~100%, >100% over-torque!)
+    function renderScrewRepair(wb, stationId, diff) {
+      const screwCount = diff >= 3 ? 4 : diff === 2 ? 3 : 2;
+      const progress = Array(screwCount).fill(0);
+      const locked = Array(screwCount).fill(false);
+
+      wb.innerHTML = `
+        <div>
+          <div class="panel-title"><span>🔧 [${stationId}. ${STATIONS[stationId].name}] 扭力板手鎖螺絲</span></div>
+          <p style="font-size:13px; color:var(--muted);">使用「輕轉 +25%」與「強力 +45%」將螺絲鎖進 <strong>80%～100% 綠區</strong>（超過 100% 會滑牙扣血！）：</p>
+          <div class="screw-grid" id="screwGrid"></div>
+        </div>
+        <div id="screwMsg" style="font-size:13px; font-weight:700; text-align:center; color:var(--muted);">精準控制扭力鎖緊所有螺絲！</div>
+      `;
+
+      const grid = document.getElementById("screwGrid");
+      for (let i = 0; i < screwCount; i++) {
+        const box = document.createElement("div");
+        box.className = "screw-item";
+        box.innerHTML = `
+          <div style="font-weight:800; font-size:12px;">🔩 螺絲 #${i + 1} (<span id="screwPct${i}">0%</span>)</div>
+          <div class="screw-bar" style="position:relative;">
+            <div style="position:absolute; right:0; top:0; bottom:0; width:20%; background:rgba(16,185,129,0.28);"></div>
+            <div class="screw-fill" id="screwFill${i}"></div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-primary btn-sm" id="screwLight${i}" style="flex:1;">🔧 +25%</button>
+            <button class="btn btn-ghost btn-sm" id="screwHeavy${i}" style="flex:1;">⚡ +45%</button>
+          </div>
+        `;
+        grid.appendChild(box);
+
+        const applyTorque = (gain) => {
+          if (locked[i]) return;
+          progress[i] += gain;
+          if (progress[i] > 100) {
+            progress[i] = 0;
+            document.getElementById(`screwFill${i}`).style.width = "0%";
+            document.getElementById(`screwPct${i}`).textContent = "0%";
+            document.getElementById("screwMsg").innerHTML = `<span style="color:var(--red);">💥 扭力過載滑牙！扣 1 顆 ❤️</span>`;
+            damageHP("螺絲扭力過載");
+            return;
+          }
+          document.getElementById(`screwFill${i}`).style.width = `${progress[i]}%`;
+          document.getElementById(`screwPct${i}`).textContent = `${progress[i]}%`;
+
+          if (progress[i] >= 80) {
+            locked[i] = true;
+            document.getElementById(`screwLight${i}`).disabled = true;
+            document.getElementById(`screwHeavy${i}`).disabled = true;
+            document.getElementById(`screwPct${i}`).innerHTML = `<span style="color:var(--emerald);">✅ 完成</span>`;
+            if (locked.every(Boolean)) {
+              setTimeout(() => markFaultFixed(stationId), 200);
+            }
+          }
+        };
+
+        document.getElementById(`screwLight${i}`).onclick = () => applyTorque(25);
+        document.getElementById(`screwHeavy${i}`).onclick = () => applyTorque(45);
+      }
+    }
+
+    // 4. AIoT Diagnostic Quiz
+    function renderQuizRepair(wb, stationId) {
+      const q = DIAGNOSTIC_QUESTIONS[Math.floor(Math.random() * DIAGNOSTIC_QUESTIONS.length)];
+      wb.innerHTML = `
+        <div>
+          <div class="panel-title"><span>🧠 [${stationId}. ${STATIONS[stationId].name}] AIoT 故障診斷問答</span></div>
+          <p style="font-size:14px; font-weight:800; color:var(--navy); margin:10px 0;">${q.q}</p>
+          <div class="quiz-options" id="chalQuizOpts"></div>
+        </div>
+        <div id="chalQuizMsg" style="font-size:13px; font-weight:700; text-align:center; color:var(--muted);">答對立即修復，答錯扣 1 顆 ❤️！</div>
+      `;
+
+      const optsEl = document.getElementById("chalQuizOpts");
+      q.opts.forEach((optText, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "quiz-opt";
+        btn.textContent = optText;
+        btn.onclick = () => {
+          if (idx === q.ans) {
+            markFaultFixed(stationId);
+          } else {
+            document.getElementById("chalQuizMsg").innerHTML = `<span style="color:var(--red);">❌ 判斷錯誤！扣 1 顆 ❤️，請重新選擇</span>`;
+            damageHP("診斷問答錯誤");
+          }
+        };
+        optsEl.appendChild(btn);
+      });
+    }
+
+    document.getElementById("btnStartChallenge").onclick = startChallengeLevel;
+    document.getElementById("btnUnlockAll").onclick = () => {
+      chalUnlockedMax = 10;
+      renderLevelStrip();
+    };
+
+    renderLevelStrip();
+    updateChallengeHeader();
+    renderFaultMachines();
+  </script>
+</body>
+</html>
